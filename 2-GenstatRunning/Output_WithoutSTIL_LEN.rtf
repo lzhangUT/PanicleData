@@ -1,0 +1,1793 @@
+{\rtf1\ansi\ansicpg1252\deff0\deflang1033\paperw11907\paperh16840\margl1417\margr1417\margt1417\margb1417{\fonttbl{\f0\fnil Arial;}{\f1\fnil Courier New;}{\f2\fswiss\fprq2\fcharset0 Courier New;}}
+{\colortbl ;\red0\green0\blue255;\red0\green0\blue0;\red0\green128\blue0;}
+\viewkind4\uc1\pard\keep\cf1\f0\fs24 Genstat 64-bit Release 19.1 ( PC/Windows 8) 04 January 2021 16:30:30\par
+Copyright 2018, VSN International Ltd.  \cf2\fs20\par
+Registered to: University of Texas at Austin\par
+ \par
+\pard\tx0\tx2106  \tab ________________________________________\par
+ \par
+ \tab Genstat Nineteenth Edition\par
+ \tab Genstat Procedure Library Release PL27.1\par
+ \tab ________________________________________\par
+ \par
+\pard\keep\cf3\f1    1  SET [WORKINGDIRECTORY='C:/Users/Li Zhang/Desktop/PanicleData/2-GenstatRunning'; DIAGNOSTIC=faults]\line    2  DELETE [REDEFINE=yes] _stitle_: TEXT _stitle_\line    3  READ [PRINT=*; SETNVALUES=yes] _stitle_\line    6  PRINT [IPRINT=*] _stitle_; JUST=left\line\cf2\f0  \par
+\pard\tx0 Data imported from CSV Text file: C:\\Users\\Li Zhang\\Desktop\\PanicleData\\2-GenstatRunning\\PanicleData_WithoutSTIL_ModelBuilding.csv\par
+ on: 4-Jan-2021 16:30:51\par
+ \par
+\pard\keep\tx0\cf3\f1    7  DELETE [REDEFINE=yes] SITE,LINE,LEN,PRM,SEC\line    8  UNITS [NVALUES=*]\line    9  FACTOR [MODIFY=no; NVALUES=3420; LEVELS=9; LABELS=!t('BRKG','CLMB','KBSM',\\\line   10  'KING','LINC','MNHT','OVTN','PKLE','TMPL'); REFERENCE=1] SITE\line   11  READ SITE; FREPRESENTATION=ordinal\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tab  Identifier\tab  Values\tab  Missing\tab  Levels\par
+\tab SITE\tab  3420\tab  0\tab  9\par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\cf3\f1  102  DELETE [REDEFINE=yes] _levels_\line  103  VARIATE [NVALUES=380] _levels_\line  104  READ _levels_\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\tab  Identifier\tab  Minimum\tab  Mean\tab  Maximum\tab  Values\tab  Missing\tab  \par
+\tab _levels_\tab  1.000\tab  201.4\tab  404.0\tab  380\tab  0\tab  \par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\cf3\f1  124  FACTOR [MODIFY=no; NVALUES=3420; LEVELS=!(#_levels_); LABELS=*\\\line  125  ; REFERENCE=1] LINE\line  126  READ LINE; FREPRESENTATION=ordinal\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tab  Identifier\tab  Values\tab  Missing\tab  Levels\par
+\tab LINE\tab  3420\tab  0\tab  380\par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\cf3\f1  295  VARIATE [NVALUES=3420] LEN\line  296  READ LEN\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\tab  Identifier\tab  Minimum\tab  Mean\tab  Maximum\tab  Values\tab  Missing\tab  \par
+\tab LEN\tab  13.00\tab  42.04\tab  81.00\tab  3420\tab  519\tab  \par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\cf3\f1  499  VARIATE [NVALUES=3420] PRM\line  500  READ PRM\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\tab  Identifier\tab  Minimum\tab  Mean\tab  Maximum\tab  Values\tab  Missing\tab  \par
+\tab PRM\tab  4.500\tab  27.41\tab  51.50\tab  3420\tab  520\tab  \par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\cf3\f1  671  VARIATE [NVALUES=3420] SEC\line  672  READ SEC\line\cf2\f0  \par
+\pard\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\tab  Identifier\tab  Minimum\tab  Mean\tab  Maximum\tab  Values\tab  Missing\tab  \par
+\tab SEC\tab  3.500\tab  11.64\tab  25.00\tab  3420\tab  499\tab  \par
+ \par
+\pard\keep\tqr\tx1638\tqr\tx2808\tqr\tx3978\tqr\tx5148\tqr\tx6318\tqr\tx7488\tx7605\cf3\f1  837\line\pard\keep  838  QIMPORT [PRINT=cata] 'C:/Users/Li Zhang/Desktop/PanicleData/2-GenstatRunning/4way_genotype_ModelBuilding.loc';\\\line  839   MAPFILENAME='C:/Users/Li Zhang/Desktop/PanicleData/2-GenstatRunning/4way_male_reduced_marker.map';\\\line  840   CHROMOSOME=m_linkage; POSITIONS=m_positions; MKSCORES=m_scores; MKNAMES=m_names;\\\line  841   IDMGENOTYPES=m_id; PARENT=m_parent; IDPARENT=m_parentid\line\cf2\f0  \par
+\cf1\fs28 Loading QTL data\cf2\fs20\par
+ \par
+\pard\tx0 Catalogue of files: \par
+ C:/Users/Li Zhang/Desktop/PanicleData/2-GenstatRunning/4way_genotype_ModelBuilding.loc\par
+ \par
+ C:/Users/Li Zhang/Desktop/PanicleData/2-GenstatRunning/4way_male_reduced_marker.map\par
+ \par
+\pard\tx0\tx3042 Population:\tab  CP\par
+Number of genotypes:\tab  380\par
+Number of markers:\tab  738\par
+Number of linkage groups:\tab  18\par
+ \par
+\pard\tqr\tx1521\tqr\tx3627\tqr\tx5031\tab Linkage group\tab  Number of markers\tab Length\par
+\tab 1K\tab  42\tab  81.84\par
+\tab 1N\tab  38\tab  72.89\par
+\tab 2K\tab  48\tab  93.92\par
+\tab 2N\tab  53\tab  102.61\par
+\tab 3K\tab  49\tab  95.74\par
+\tab 3N\tab  60\tab  118.87\par
+\tab 4K\tab  32\tab  61.81\par
+\tab 4N\tab  37\tab  70.90\par
+\tab 5K\tab  49\tab  95.50\par
+\tab 5N\tab  54\tab  104.55\par
+\tab 6K\tab  27\tab  51.45\par
+\tab 6N\tab  33\tab  62.82\par
+\tab 7K\tab  28\tab  53.22\par
+\tab 7N\tab  28\tab  54.06\par
+\tab 8K\tab  22\tab  41.10\par
+\tab 8N\tab  23\tab  42.19\par
+\tab 9K\tab  54\tab  105.80\par
+\tab 9N\tab  61\tab  119.99\par
+ \par
+\pard\tx0\tx1404 Parent IDs:\tab  Parent1, Parent2, Parent3, Parent4\par
+\pard\keep\cf3\f1  842  SET [IN=*]\line  848  QIBDPROBABILITIES [PRINT=*; STEP=1000000; POPULATION=CP; MAPPING=kosambi] MKSCORES=m_scores;\\\line  849   CHROMO=m_linkage; POSITIONS=m_positions; MKNAMES=m_names; IDMGENOTYPES=m_id; PARENT=m_parent;\\\line  850   IDPARENTS=m_parentid; ADDITIVE=gp_additive; SCHROMOSOME=gp_linkage; SPOSITIONS=gp_pos;\\\line  851   IDLOCI=gp_vnames; MKLOCI=gp_mkloci; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance\line  852  DELETE [REDEFINE=yes] qtl_minlogp_,qtl_candidates,_threshold\line  853  QMQTLSCAN [PRINT=summary,progress; PLOT=profile; POPULATIONTYPE=CP; VCMODEL=un; THRMETHOD=liji;\\\line  854   THRESHOLD=_threshold; ALPHA=0.05; COFWINDOW=50; WORKSPACE=100] LEN; GENOTYPES=LINE;\\\line  855   ENVIRONMENT=SITE; ADDITIVE=gp_additive; CHROMOSOME=gp_linkage; POSITION=gp_pos; QSTATISTIC=qtl_minlogp_;\\\line  856   ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance; IDLOCI=gp_vnames; IDMGENOTYPES=m_id\line\cf2\f0  \par
+\cf1\fs36 Genome-wide scan for QTL effects in multiple environment trials\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  10\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:00:07\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:07:57\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  50\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:00:34\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:07:48\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  100\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:01:08\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:07:16\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  150\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:01:43\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:06:43\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  200\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:02:18\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:06:10\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  250\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:02:52\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:05:35\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  300\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:03:26\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:05:01\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  350\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:04:01\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:04:26\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  400\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:04:35\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:03:51\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  450\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:05:09\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:03:17\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  500\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:05:43\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:02:43\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  550\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:06:17\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:02:08\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  600\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:06:52\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:01:34\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  650\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:07:26\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:01:00\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  700\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:08:00\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:00:25\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time total\tab  0:08:27\tab  (hh:mm:ss)\par
+ \par
+ \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+Trait: LEN\par
+\pard\tqr\tx7956\tab The following loci have a test statistic larger than THRESHOLD=3.531\par
+ \par
+\pard\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\tab Locus\tab IdLocus\tab Chromosome\tab Position\tab  -Log10(P)\par
+\tab 119\tab  Chr02K_60.739957\tab  2K\tab  75.9\tab  3.71\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\tab  4.94\par
+\tab 121\tab  Chr02K_63.664705\tab  2K\tab  80.4\tab  4.27\par
+\tab 122\tab  Chr02K_64.045891\tab  2K\tab  81.9\tab  4.16\par
+\tab 125\tab  Chr02K_65.985355\tab  2K\tab  88.0\tab  3.60\par
+\tab 126\tab  Chr02K_66.666239\tab  2K\tab  90.0\tab  3.93\par
+\tab 127\tab  Chr02K_66.93184\tab  2K\tab  92.2\tab  4.08\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\tab  3.84\par
+\tab 477\tab  Chr06K_24.462082\tab  6K\tab  28.0\tab  4.19\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\tab  4.38\par
+\tab 695\tab  Chr09N_16.482124\tab  9N\tab  34.2\tab  3.59\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.1\tab  3.97\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\tab  3.80\par
+ \par
+\pard\keep\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\cf3\f1  857  QCANDIDATES [THRESHOLD=_threshold; QTLWINDOW=30] STATISTIC=qtl_minlogp_; CHROMOSOMES=gp_linkage;\\\line  858   POSITION=gp_pos;  QTLCANDIDATES=qtl_candidates; IDLOCI=gp_vnames\line\cf2\f0  \par
+\cf1\fs32 Selection of QTL candidates\cf2\fs20\par
+ \par
+The following candidates have been selected\par
+ \par
+\pard\tqr\tx1170\tqr\tx3159\tqr\tx4563\tqr\tx5967\tab Locus\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.1\par
+ \par
+ \par
+\pard\keep\cf3\f1  859  DELETE [REDEFINE=yes] _cofactors\line  860  VARIATE _cofactors; VALUE=!(#qtl_candidates)\line  861  DELETE [REDEFINE=yes] qtl_minlogp_,qtl_candidates,_threshold\line  862  QMQTLSCAN [PRINT=summary,progress; PLOT=profile; COFACTOR=_cofactors; POPULATIONTYPE=CP;\\\line  863   VCMODEL=un; THRMETHOD=liji; THRESHOLD=_threshold; ALPHA=0.05; COFWINDOW=50; WORKSPACE=100]\\\line  864   LEN; GENOTYPES=LINE; ENVIRONMENT=SITE; ADDITIVE=gp_additive; CHROMOSOME=gp_linkage;\\\line  865   POSITION=gp_pos; QSTATISTIC=qtl_minlogp_; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance;\\\line  866   IDLOCI=gp_vnames; IDMGENOTYPES=m_id\line\cf2\f0  \par
+\cf1\fs36 Genome-wide scan for QTL effects in multiple environment trials\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  10\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:01:14\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:29:38\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  50\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:06:34\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:30:09\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  100\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:13:25\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:25:29\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  150\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:18:59\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:14:16\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  200\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:25:45\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:09:07\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  250\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:32:36\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:03:31\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  300\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:39:14\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:57:09\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  350\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:45:06\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:49:52\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  400\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:52:02\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:43:50\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  450\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:58:50\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:37:32\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  500\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:04:25\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:30:32\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  550\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:10:57\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:24:07\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  600\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:17:27\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:17:41\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  650\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:23:57\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:11:14\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  700\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:29:41\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:04:44\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time total\tab  1:34:18\tab  (hh:mm:ss)\par
+ \par
+ \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+Trait: LEN\par
+\pard\tqr\tx2808\tab Specified cofactors are:\par
+\pard\tqr\tx1404\tqr\tx2808\tqr\tx4212\tqr\tx5616\tab Cofactor\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.89\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.03\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  29.96\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.09\par
+ \par
+\pard\tqr\tx7956\tab The following loci have a test statistic larger than THRESHOLD=3.531\par
+ \par
+\pard\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\tab Locus\tab IdLocus\tab Chromosome\tab Position\tab  -Log10(P)\par
+\tab 119\tab  Chr02K_60.739957\tab  2K\tab  75.9\tab  3.71\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\tab  4.89\par
+\tab 121\tab  Chr02K_63.664705\tab  2K\tab  80.4\tab  3.86\par
+\tab 122\tab  Chr02K_64.045891\tab  2K\tab  81.9\tab  3.59\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\tab  4.32\par
+\tab 264\tab  Chr03N_31.178035\tab  3N\tab  67.9\tab  3.58\par
+\tab 304\tab  Chr04K_13.041487\tab  4K\tab  26.3\tab  3.86\par
+\tab 305\tab  Chr04K_14.171113\tab  4K\tab  28.0\tab  3.64\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\tab  4.10\par
+\tab 307\tab  Chr04K_20.407141\tab  4K\tab  32.2\tab  3.64\par
+\tab 390\tab  Chr05K_47.001709\tab  5K\tab  60.1\tab  3.84\par
+\tab 391\tab  Chr05K_48.021054\tab  5K\tab  61.9\tab  4.23\par
+\tab 392\tab  Chr05K_50.651488\tab  5K\tab  64.5\tab  4.39\par
+\tab 393\tab  Chr05K_51.027693\tab  5K\tab  65.9\tab  4.22\par
+\tab 394\tab  Chr05K_52.242085\tab  5K\tab  68.1\tab  4.25\par
+\tab 396\tab  Chr05K_54.306856\tab  5K\tab  71.9\tab  3.67\par
+\tab 397\tab  Chr05K_56.01142\tab  5K\tab  74.1\tab  4.35\par
+\tab 398\tab  Chr05K_56.620419\tab  5K\tab  76.0\tab  4.42\par
+\tab 399\tab  Chr05K_57.484\tab  5K\tab  77.9\tab  4.22\par
+\tab 400\tab  Chr05K_57.980773\tab  5K\tab  79.9\tab  3.60\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\tab  3.64\par
+\tab 668\tab  Chr09K_61.740955\tab  9K\tab  88.1\tab  3.58\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\tab  3.57\par
+ \par
+\pard\keep\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\cf3\f1  867  QCANDIDATES [THRESHOLD=_threshold; QTLWINDOW=30] STATISTIC=qtl_minlogp_; CHROMOSOMES=gp_linkage;\\\line  868   POSITION=gp_pos;  QTLCANDIDATES=qtl_candidates; IDLOCI=gp_vnames\line\cf2\f0  \par
+\cf1\fs32 Selection of QTL candidates\cf2\fs20\par
+ \par
+The following candidates have been selected\par
+ \par
+\pard\tqr\tx1170\tqr\tx3159\tqr\tx4563\tqr\tx5967\tab Locus\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\par
+\tab 398\tab  Chr05K_56.620419\tab  5K\tab  76.0\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\par
+\tab 668\tab  Chr09K_61.740955\tab  9K\tab  88.1\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\par
+ \par
+ \par
+\pard\keep\cf3\f1  869  DELETE [REDEFINE=yes] _cofactors\line  870  VARIATE _cofactors; VALUE=!(#qtl_candidates)\line  871  DELETE [REDEFINE=yes] qtl_minlogp_,qtl_candidates,_threshold\line  872  QMQTLSCAN [PRINT=summary,progress; PLOT=profile; COFACTOR=_cofactors; POPULATIONTYPE=CP;\\\line  873   VCMODEL=un; THRMETHOD=liji; THRESHOLD=_threshold; ALPHA=0.05; COFWINDOW=50; WORKSPACE=100]\\\line  874   LEN; GENOTYPES=LINE; ENVIRONMENT=SITE; ADDITIVE=gp_additive; CHROMOSOME=gp_linkage;\\\line  875   POSITION=gp_pos; QSTATISTIC=qtl_minlogp_; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance;\\\line  876   IDLOCI=gp_vnames; IDMGENOTYPES=m_id\line\cf2\f0  \par
+\cf1\fs36 Genome-wide scan for QTL effects in multiple environment trials\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  10\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:03:36\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  4:21:19\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  50\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:19:30\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  4:28:01\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  100\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:39:22\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  4:10:44\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  150\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:56:46\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  3:42:08\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  200\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:16:38\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  3:25:46\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  250\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:36:24\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  3:07:47\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  300\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:52:44\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:44:13\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  350\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:10:53\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:24:43\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  400\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:29:07\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:05:38\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  450\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:47:56\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:47:06\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  500\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  3:04:59\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:27:41\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  550\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  3:24:51\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:09:39\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  600\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  3:44:43\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:51:19\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  650\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  4:04:36\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:32:44\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  700\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  4:20:07\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:13:45\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time total\tab  4:34:27\tab  (hh:mm:ss)\par
+ \par
+ \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+Trait: LEN\par
+\pard\tqr\tx2808\tab Specified cofactors are:\par
+\pard\tqr\tx1404\tqr\tx2808\tqr\tx4212\tqr\tx5616\tab Cofactor\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.89\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.06\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.03\par
+\tab 398\tab  Chr05K_56.620419\tab  5K\tab  76.02\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  29.96\par
+\tab 668\tab  Chr09K_61.740955\tab  9K\tab  88.12\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.02\par
+ \par
+\pard\tqr\tx7956\tab The following loci have a test statistic larger than THRESHOLD=3.531\par
+ \par
+\pard\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\tab Locus\tab IdLocus\tab Chromosome\tab Position\tab  -Log10(P)\par
+\tab 119\tab  Chr02K_60.739957\tab  2K\tab  75.9\tab  3.79\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\tab  5.13\par
+\tab 121\tab  Chr02K_63.664705\tab  2K\tab  80.4\tab  3.72\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\tab  4.23\par
+\tab 304\tab  Chr04K_13.041487\tab  4K\tab  26.3\tab  3.71\par
+\tab 305\tab  Chr04K_14.171113\tab  4K\tab  28.0\tab  3.60\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\tab  3.88\par
+\tab 391\tab  Chr05K_48.021054\tab  5K\tab  61.9\tab  3.84\par
+\tab 392\tab  Chr05K_50.651488\tab  5K\tab  64.5\tab  4.46\par
+\tab 393\tab  Chr05K_51.027693\tab  5K\tab  65.9\tab  4.33\par
+\tab 394\tab  Chr05K_52.242085\tab  5K\tab  68.1\tab  4.50\par
+\tab 396\tab  Chr05K_54.306856\tab  5K\tab  71.9\tab  3.64\par
+\tab 397\tab  Chr05K_56.01142\tab  5K\tab  74.1\tab  4.25\par
+\tab 398\tab  Chr05K_56.620419\tab  5K\tab  76.0\tab  4.37\par
+\tab 399\tab  Chr05K_57.484\tab  5K\tab  77.9\tab  4.09\par
+\tab 400\tab  Chr05K_57.980773\tab  5K\tab  79.9\tab  3.56\par
+\tab 477\tab  Chr06K_24.462082\tab  6K\tab  28.0\tab  4.44\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\tab  4.48\par
+\tab 690\tab  Chr09N_10.880731\tab  9N\tab  24.1\tab  3.74\par
+\tab 691\tab  Chr09N_12.531268\tab  9N\tab  26.0\tab  4.53\par
+\tab 692\tab  Chr09N_13.689487\tab  9N\tab  28.1\tab  5.47\par
+\tab 693\tab  Chr09N_14.471542\tab  9N\tab  30.1\tab  4.98\par
+\tab 694\tab  Chr09N_15.052555\tab  9N\tab  32.0\tab  5.53\par
+\tab 695\tab  Chr09N_16.482124\tab  9N\tab  34.2\tab  5.24\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.1\tab  6.39\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\tab  6.33\par
+\tab 698\tab  Chr09N_19.333648\tab  9N\tab  40.1\tab  5.57\par
+\tab 699\tab  Chr09N_20.831824\tab  9N\tab  42.2\tab  4.59\par
+\tab 700\tab  Chr09N_21.588445\tab  9N\tab  43.8\tab  4.67\par
+\tab 701\tab  Chr09N_22.299301\tab  9N\tab  46.2\tab  3.72\par
+\tab 703\tab  Chr09N_25.48572\tab  9N\tab  50.0\tab  3.69\par
+\tab 704\tab  Chr09N_26.905609\tab  9N\tab  52.1\tab  4.01\par
+\tab 705\tab  Chr09N_27.846586\tab  9N\tab  54.0\tab  3.54\par
+ \par
+\pard\keep\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\cf3\f1  877  QCANDIDATES [THRESHOLD=_threshold; QTLWINDOW=30] STATISTIC=qtl_minlogp_; CHROMOSOMES=gp_linkage;\\\line  878   POSITION=gp_pos;  QTLCANDIDATES=qtl_candidates; IDLOCI=gp_vnames\line\cf2\f0  \par
+\cf1\fs32 Selection of QTL candidates\cf2\fs20\par
+ \par
+The following candidates have been selected\par
+ \par
+\pard\tqr\tx1170\tqr\tx3159\tqr\tx4563\tqr\tx5967\tab Locus\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\par
+\tab 394\tab  Chr05K_52.242085\tab  5K\tab  68.1\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.1\par
+ \par
+ \par
+\pard\keep\cf3\f1  879  DELETE [REDEFINE=yes] _cofactors\line  880  VARIATE _cofactors; VALUE=!(#qtl_candidates)\line  881  DELETE [REDEFINE=yes] qtl_minlogp_,qtl_candidates,_threshold\line  882  QMQTLSCAN [PRINT=summary,progress; PLOT=profile; COFACTOR=_cofactors; POPULATIONTYPE=CP;\\\line  883   VCMODEL=un; THRMETHOD=liji; THRESHOLD=_threshold; ALPHA=0.05; COFWINDOW=50; WORKSPACE=100]\\\line  884   LEN; GENOTYPES=LINE; ENVIRONMENT=SITE; ADDITIVE=gp_additive; CHROMOSOME=gp_linkage;\\\line  885   POSITION=gp_pos; QSTATISTIC=qtl_minlogp_; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance;\\\line  886   IDLOCI=gp_vnames; IDMGENOTYPES=m_id\line\cf2\f0  \par
+\cf1\fs36 Genome-wide scan for QTL effects in multiple environment trials\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  10\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:02:31\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  3:02:55\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  50\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:13:42\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  3:08:15\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  100\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:27:41\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:56:18\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  150\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:39:55\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:36:11\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  200\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  0:53:53\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:24:41\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  250\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:07:47\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  2:12:02\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  300\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:19:16\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:55:28\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  350\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:31:40\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:41:22\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  400\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:44:09\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:27:45\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  450\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  1:57:34\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:14:59\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  500\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:09:33\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  1:01:24\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  550\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:23:31\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:48:48\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  600\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:37:31\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:35:58\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  650\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  2:51:30\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:22:57\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx234\tqr\tx351\tqr\tx468\tab Current locus number\tab  700\tab  out of\tab  738\par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time elapsed\tab  3:04:10\tab  (hh:mm:ss)\par
+\tab CPU time remaining (estimate)\tab  0:09:44\tab  (hh:mm:ss)\par
+\pard\keep  \par
+\pard\tqr\tx117\tqr\tx1053\tqr\tx1170\tab CPU time total\tab  3:14:19\tab  (hh:mm:ss)\par
+ \par
+ \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+Trait: LEN\par
+\pard\tqr\tx2808\tab Specified cofactors are:\par
+\pard\tqr\tx1404\tqr\tx2808\tqr\tx4212\tqr\tx5616\tab Cofactor\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.89\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.06\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.03\par
+\tab 394\tab  Chr05K_52.242085\tab  5K\tab  68.12\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  29.96\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.09\par
+ \par
+\pard\tqr\tx7956\tab The following loci have a test statistic larger than THRESHOLD=3.531\par
+ \par
+\pard\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\tab Locus\tab IdLocus\tab Chromosome\tab Position\tab  -Log10(P)\par
+\tab 119\tab  Chr02K_60.739957\tab  2K\tab  75.9\tab  3.88\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\tab  5.31\par
+\tab 121\tab  Chr02K_63.664705\tab  2K\tab  80.4\tab  3.98\par
+\tab 122\tab  Chr02K_64.045891\tab  2K\tab  81.9\tab  3.61\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\tab  4.52\par
+\tab 304\tab  Chr04K_13.041487\tab  4K\tab  26.3\tab  3.73\par
+\tab 305\tab  Chr04K_14.171113\tab  4K\tab  28.0\tab  3.62\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\tab  4.06\par
+\tab 390\tab  Chr05K_47.001709\tab  5K\tab  60.1\tab  3.71\par
+\tab 391\tab  Chr05K_48.021054\tab  5K\tab  61.9\tab  4.20\par
+\tab 392\tab  Chr05K_50.651488\tab  5K\tab  64.5\tab  4.62\par
+\tab 393\tab  Chr05K_51.027693\tab  5K\tab  65.9\tab  4.35\par
+\tab 394\tab  Chr05K_52.242085\tab  5K\tab  68.1\tab  4.48\par
+\tab 396\tab  Chr05K_54.306856\tab  5K\tab  71.9\tab  3.71\par
+\tab 397\tab  Chr05K_56.01142\tab  5K\tab  74.1\tab  4.25\par
+\tab 398\tab  Chr05K_56.620419\tab  5K\tab  76.0\tab  4.35\par
+\tab 399\tab  Chr05K_57.484\tab  5K\tab  77.9\tab  4.02\par
+\tab 477\tab  Chr06K_24.462082\tab  6K\tab  28.0\tab  3.87\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\tab  4.04\par
+\tab 517\tab  Chr06N_48.768076\tab  6N\tab  54.2\tab  3.67\par
+\tab 691\tab  Chr09N_12.531268\tab  9N\tab  26.0\tab  4.11\par
+\tab 692\tab  Chr09N_13.689487\tab  9N\tab  28.1\tab  4.84\par
+\tab 693\tab  Chr09N_14.471542\tab  9N\tab  30.1\tab  4.39\par
+\tab 694\tab  Chr09N_15.052555\tab  9N\tab  32.0\tab  4.55\par
+\tab 695\tab  Chr09N_16.482124\tab  9N\tab  34.2\tab  4.07\par
+\tab 696\tab  Chr09N_17.684245\tab  9N\tab  36.1\tab  5.02\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\tab  5.24\par
+\tab 698\tab  Chr09N_19.333648\tab  9N\tab  40.1\tab  4.48\par
+ \par
+\pard\keep\tqr\tx1053\tqr\tx3042\tqr\tx4329\tqr\tx5616\tqr\tx6786\cf3\f1  887  QCANDIDATES [THRESHOLD=_threshold; QTLWINDOW=30] STATISTIC=qtl_minlogp_; CHROMOSOMES=gp_linkage;\\\line  888   POSITION=gp_pos;  QTLCANDIDATES=qtl_candidates; IDLOCI=gp_vnames\line\cf2\f0  \par
+\cf1\fs32 Selection of QTL candidates\cf2\fs20\par
+ \par
+The following candidates have been selected\par
+ \par
+\pard\tqr\tx1170\tqr\tx3159\tqr\tx4563\tqr\tx5967\tab Locus\tab IdLocus\tab Chromosome\tab Position\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.9\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.1\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.0\par
+\tab 392\tab  Chr05K_50.651488\tab  5K\tab  64.5\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  30.0\par
+\tab 517\tab  Chr06N_48.768076\tab  6N\tab  54.2\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.0\par
+ \par
+ \par
+\pard\keep\cf3\f1  889  DELETE [REDEFINE=yes] _cofactors\line  890  IF NVALUES(qtl_candidates).EQ.C('*')\line  891    VARIATE _cofactors\line  892  ELSE\line  893    VARIATE _cofactors; VALUE=!(#qtl_candidates)\line  894  ENDIF\line  895  DELETE [REDEFINE=yes] _qtl_interactions\line  896  IF NVALUES(_cofactors).GT.1\line  897  QMBACKSEL [PRINT=summary,model,components,effects,wald; POPULATIONTYPE=CP; VCMODEL=un ;\\\line  898   ALPHA=0.05; WORKSPACE=100] TRAIT=LEN; ENVIRONMENTS=SITE; GENOTYPES=LINE; CHROMOSOME=gp_linkage;\\\line  899   POSITION=gp_pos; ADDITIVE=gp_additive; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance;\\\line  900   IDMGENOTYPES=m_id; IDLOCI=gp_vnames; QTLCANDIDATES=_cofactors; QTLSELECTED=POS; INTERACTIONS=_qtl_interactions;\\\line  901   DOMSELECTED=_qtl_seldominance_pos; DOMINTERACTIONS=_qtl_dominteractions\line\cf2\f0  \par
+\cf1\fs36 QTL backward selection for loci in multiple environment trials\cf2\fs20\par
+ \par
+ \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+\cf1\fs28 Trait: LEN\cf2\fs20\par
+ \par
+       Term  SITE.pred[697] is removed from the model\line        Term  pred[120].SITE is removed from the model\line        Term  SITE.pred[306] is removed from the model\line  \par
+ \par
+\cf1\fs28 Significant terms\cf2\fs20\par
+ \par
+\pard\tqr\tx819\tqr\tx2340\tqr\tx3627\tqr\tx4914\tqr\tx6318\tab Locus\tab IdLocus\tab Chromosome\tab Position\tab Interaction\par
+\tab 120\tab  Chr02K_62.598826\tab  2K\tab  77.89\tab  0\par
+\tab 261\tab  Chr03N_26.099983\tab  3N\tab  62.06\tab  1\par
+\tab 306\tab  Chr04K_18.145014\tab  4K\tab  30.03\tab  0\par
+\tab 392\tab  Chr05K_50.651488\tab  5K\tab  64.46\tab  1\par
+\tab 478\tab  Chr06K_31.834459\tab  6K\tab  29.96\tab  1\par
+\tab 517\tab  Chr06N_48.768076\tab  6N\tab  54.19\tab  1\par
+\tab 697\tab  Chr09N_18.617122\tab  9N\tab  38.02\tab  0\par
+ \par
+ \par
+ \par
+\cf1\fs32 REML variance components analysis\cf2\fs20\par
+ \par
+\pard\tx0\tx2340 Response variate:\tab LEN\par
+Fixed model:\tab Constant + SITE + pred[120] + pred[261] + pred[306] + pred[392] + pred[478] + pred[517] + pred[697] + SITE.pred[261] + SITE.pred[392] + SITE.pred[478] + SITE.pred[517]\par
+Random model:\tab LINE.SITE\par
+Number of units:\tab 3420\par
+ \par
+LINE.SITE used as residual term with covariance structure as below\par
+ \par
+Sparse algorithm with AI optimisation\par
+Units with missing data values included\par
+ \par
+ \par
+\cf1\fs28 Covariance structures defined for random model\cf2\fs20\par
+ \par
+Covariance structures defined within terms:\par
+ \par
+\pard\tx0\tx2925\tx4446\tqr\tx8424\tqr\tx9594 Term\tab Factor\tab Model\tab Order\tab No. rows\par
+LINE.SITE\tab LINE\tab Identity\tab 0\tab 380\par
+\tab SITE\tab Unstructured\tab 8\tab 9\par
+ \par
+ \par
+\cf1\fs28 Residual variance model\cf2\fs20\par
+ \par
+\pard\tx0\tx2106\tx3861\tx5616\tqr\tx8541\tqr\tx9711 Term\tab Factor\tab Model(order)\tab Parameter\tab Estimate\tab s.e.\par
+LINE.SITE\tab  \tab\tab Sigma2\tab 1.000\tab fixed\par
+\tab LINE\tab Identity\tab -        \tab -\tab -\par
+\tab SITE\tab Unstructured\tab v_11\tab  50.28\tab  3.94\par
+\tab  \tab  \tab v_21\tab  20.55\tab  2.97\par
+\tab  \tab  \tab v_22\tab  43.22\tab  3.57\par
+\tab  \tab  \tab v_31\tab  19.81\tab  2.47\par
+\tab  \tab  \tab v_32\tab  18.89\tab  2.36\par
+\tab  \tab  \tab v_33\tab  29.07\tab  2.37\par
+\tab  \tab  \tab v_41\tab  6.349\tab  2.751\par
+\tab  \tab  \tab v_42\tab  8.294\tab  2.664\par
+\tab  \tab  \tab v_43\tab  9.438\tab  2.211\par
+\tab  \tab  \tab v_44\tab  46.80\tab  3.66\par
+\tab  \tab  \tab v_51\tab  20.13\tab  2.78\par
+\tab  \tab  \tab v_52\tab  18.56\tab  2.65\par
+\tab  \tab  \tab v_53\tab  19.65\tab  2.23\par
+\tab  \tab  \tab v_54\tab  7.009\tab  2.499\par
+\tab  \tab  \tab v_55\tab  37.27\tab  3.08\par
+\tab  \tab  \tab v_61\tab  14.58\tab  3.27\par
+\tab  \tab  \tab v_62\tab  16.58\tab  3.05\par
+\tab  \tab  \tab v_63\tab  14.89\tab  2.56\par
+\tab  \tab  \tab v_64\tab  12.83\tab  3.08\par
+\tab  \tab  \tab v_65\tab  15.05\tab  2.92\par
+\tab  \tab  \tab v_66\tab  57.80\tab  4.65\par
+\tab  \tab  \tab v_71\tab  17.55\tab  2.70\par
+\tab  \tab  \tab v_72\tab  17.31\tab  2.59\par
+\tab  \tab  \tab v_73\tab  17.79\tab  2.20\par
+\tab  \tab  \tab v_74\tab  10.58\tab  2.49\par
+\tab  \tab  \tab v_75\tab  17.63\tab  2.47\par
+\tab  \tab  \tab v_76\tab  14.88\tab  2.89\par
+\tab  \tab  \tab v_77\tab  39.99\tab  3.14\par
+\tab  \tab  \tab v_81\tab  13.78\tab  3.44\par
+\tab  \tab  \tab v_82\tab  18.20\tab  3.31\par
+\tab  \tab  \tab v_83\tab  12.54\tab  2.55\par
+\tab  \tab  \tab v_84\tab  5.996\tab  3.159\par
+\tab  \tab  \tab v_85\tab  15.46\tab  2.97\par
+\tab  \tab  \tab v_86\tab  12.06\tab  3.69\par
+\tab  \tab  \tab v_87\tab  15.78\tab  3.08\par
+\tab  \tab  \tab v_88\tab  57.35\tab  4.87\par
+\tab  \tab  \tab v_91\tab  11.72\tab  2.36\par
+\tab  \tab  \tab v_92\tab  10.75\tab  2.33\par
+\tab  \tab  \tab v_93\tab  11.32\tab  1.89\par
+\tab  \tab  \tab v_94\tab  9.738\tab  2.282\par
+\tab  \tab  \tab v_95\tab  11.74\tab  2.15\par
+\tab  \tab  \tab v_96\tab  10.23\tab  2.64\par
+\tab  \tab  \tab v_97\tab  14.55\tab  2.19\par
+\tab  \tab  \tab v_98\tab  8.614\tab  2.682\par
+\tab  \tab  \tab v_99\tab  32.94\tab  2.58\par
+ \par
+\pard\keep  \par
+\cf1\fs28 Tests for fixed effects\cf2\fs20\par
+ \par
+Sequentially adding terms to fixed model\par
+ \par
+\pard\tx0\tqr\tx4914\tqr\tx5850\tqr\tx7488\tqr\tx8424\tqr\tx9360 Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+SITE\tab 1415.44\tab 8\tab 173.23\tab 323.4\tab  <0.001\par
+pred[120]\tab 41.27\tab 3\tab 13.76\tab 354.3\tab  <0.001\par
+pred[261]\tab 12.55\tab 3\tab 4.18\tab 356.0\tab  0.006\par
+pred[306]\tab 27.81\tab 3\tab 9.27\tab 356.8\tab  <0.001\par
+pred[392]\tab 19.45\tab 3\tab 6.48\tab 355.8\tab  <0.001\par
+pred[478]\tab 12.59\tab 3\tab 4.20\tab 355.3\tab  0.006\par
+pred[517]\tab 4.53\tab 3\tab 1.51\tab 355.5\tab  0.212\par
+pred[697]\tab 51.85\tab 3\tab 17.28\tab 356.4\tab  <0.001\par
+SITE.pred[261]\tab 51.13\tab 24\tab 2.08\tab 687.3\tab  0.002\par
+SITE.pred[392]\tab 45.85\tab 24\tab 1.86\tab 690.8\tab  0.008\par
+SITE.pred[478]\tab 59.18\tab 24\tab 2.41\tab 687.0\tab  <0.001\par
+SITE.pred[517]\tab 54.76\tab 24\tab 2.23\tab 684.7\tab  <0.001\par
+ \par
+Dropping individual terms from full fixed model\par
+ \par
+Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+pred[120]\tab 42.92\tab 3\tab 14.31\tab 354.3\tab  <0.001\par
+pred[306]\tab 17.90\tab 3\tab 5.97\tab 356.8\tab  <0.001\par
+pred[697]\tab 51.07\tab 3\tab 17.02\tab 356.4\tab  <0.001\par
+SITE.pred[261]\tab 53.35\tab 24\tab 2.17\tab 687.3\tab  0.001\par
+SITE.pred[392]\tab 45.14\tab 24\tab 1.84\tab 690.8\tab  0.009\par
+SITE.pred[478]\tab 60.59\tab 24\tab 2.46\tab 687.0\tab  <0.001\par
+SITE.pred[517]\tab 54.76\tab 24\tab 2.23\tab 684.7\tab  <0.001\par
+ \par
+\cf1\i\fs24 Message: denominator degrees of freedom for approximate F-tests are calculated using algebraic derivatives ignoring fixed/boundary/singular variance parameters.\cf2\i0\fs20\par
+ \par
+ \par
+\cf1\fs28 Table of effects for Constant\cf2\fs20\par
+ \par
+  46.63    Standard error: 0.405 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tqr\tx2340\tqr\tx3276\tqr\tx4212\tqr\tx5148\tqr\tx6084\tqr\tx7020\tqr\tx7956\tab SITE\tab BRKG\tab CLMB\tab KBSM\tab KING\tab LINC\tab MNHT\tab OVTN\tab PKLE\par
+\tab\tab 0.000\tab -3.990\tab -2.538\tab -10.649\tab 1.530\tab -5.005\tab -3.240\tab -7.826\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tab SITE\tab TMPL\par
+\tab\tab -9.960\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4505\par
+Maximum:\tab  0.5712\par
+Minimum:\tab  0.3223\par
+ \par
+Average variance of differences: 0.2067 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[120]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[120]\tab add2pr[120]\tab dompr[120]\par
+\tab\tab 1.3606\tab 0.7013\tab -0.1119\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.2979\par
+Maximum:\tab  0.3085\par
+Minimum:\tab  0.2774\par
+ \par
+Average variance of differences: 0.08895 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[261]\tab add2pr[261]\tab dompr[261]\par
+\tab\tab 0.1087\tab -1.0924\tab -0.3207\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5285\par
+Maximum:\tab  0.5376\par
+Minimum:\tab  0.5235\par
+ \par
+Average variance of differences: 0.2793 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[306]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[306]\tab add2pr[306]\tab dompr[306]\par
+\tab\tab -0.5094\tab -0.6846\tab -0.1104\par
+ \par
+ \par
+Standard errors of differences\par
+\pard\keep  \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.3252\par
+Maximum:\tab  0.3414\par
+Minimum:\tab  0.2937\par
+ \par
+Average variance of differences: 0.1063 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[392]\tab add2pr[392]\tab dompr[392]\par
+\tab\tab -0.7624\tab 0.0198\tab -0.8181\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5535\par
+Maximum:\tab  0.5824\par
+Minimum:\tab  0.4977\par
+ \par
+Average variance of differences: 0.3079 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[478]\tab add2pr[478]\tab dompr[478]\par
+\tab\tab 0.2662\tab 0.9204\tab 0.3022\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5353\par
+Maximum:\tab  0.5529\par
+Minimum:\tab  0.5172\par
+ \par
+Average variance of differences: 0.2867 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[517]\tab add2pr[517]\tab dompr[517]\par
+\tab\tab 0.7506\tab -0.8765\tab -0.7731\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5438\par
+Maximum:\tab  0.5578\par
+Minimum:\tab  0.5276\par
+ \par
+Average variance of differences: 0.2959 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[697]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[697]\tab add2pr[697]\tab dompr[697]\par
+\tab\tab -1.2568\tab -0.9628\tab -0.2720\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.3075\par
+Maximum:\tab  0.3124\par
+Minimum:\tab  0.2990\par
+ \par
+Average variance of differences: 0.09458 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[261]\tab add2pr[261]\tab dompr[261]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.0349\tab 0.7078\tab -1.3452\par
+\tab KBSM\tab -0.4364\tab 0.3944\tab -0.2864\par
+\tab KING\tab -1.1498\tab 0.5152\tab -0.2273\par
+\tab LINC\tab -0.8586\tab 0.0786\tab -1.0119\par
+\tab MNHT\tab -0.2255\tab 0.2882\tab 0.3304\par
+\tab OVTN\tab -0.8502\tab 0.6090\tab -0.1549\par
+\tab PKLE\tab 0.3223\tab 0.6043\tab 0.3202\par
+\tab TMPL\tab -0.4986\tab 0.9771\tab -0.2301\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5364\par
+Maximum:\tab  0.7209\par
+Minimum:\tab  0.3105\par
+ \par
+Average variance of differences: 0.2986 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[392]\tab add2pr[392]\tab dompr[392]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.6605\tab -0.4499\tab -0.0051\par
+\tab KBSM\tab -0.0805\tab -0.2668\tab 0.1797\par
+\tab KING\tab 0.0014\tab -0.4089\tab 1.7666\par
+\tab LINC\tab -0.6532\tab -0.3572\tab 0.1725\par
+\tab MNHT\tab 0.0960\tab -1.0083\tab 0.6155\par
+\tab OVTN\tab -0.6075\tab -0.5142\tab 0.0844\par
+\tab PKLE\tab 0.3997\tab 0.1618\tab 0.4670\par
+\tab TMPL\tab -0.8362\tab -1.0049\tab 0.9994\par
+ \par
+\pard\keep  \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5567\par
+Maximum:\tab  0.7705\par
+Minimum:\tab  0.3196\par
+ \par
+Average variance of differences: 0.3223 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[478]\tab add2pr[478]\tab dompr[478]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.0981\tab -0.5572\tab 0.0760\par
+\tab KBSM\tab -0.3195\tab 0.3502\tab -0.0975\par
+\tab KING\tab -0.5965\tab -0.6149\tab -0.9629\par
+\tab LINC\tab 0.1571\tab 0.3133\tab 0.4602\par
+\tab MNHT\tab -0.3631\tab -0.2807\tab -0.7467\par
+\tab OVTN\tab -0.1268\tab -1.1537\tab 0.3742\par
+\tab PKLE\tab -0.4420\tab -0.0134\tab -1.4255\par
+\tab TMPL\tab -0.0736\tab -0.4081\tab -0.1644\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5375\par
+Maximum:\tab  0.7285\par
+Minimum:\tab  0.3096\par
+ \par
+Average variance of differences: 0.3001 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[517]\tab add2pr[517]\tab dompr[517]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -1.2119\tab 0.4710\tab 0.6675\par
+\tab KBSM\tab -0.6301\tab 0.5221\tab 0.7249\par
+\tab KING\tab -2.2751\tab -0.1697\tab 0.5040\par
+\tab LINC\tab -0.2362\tab 0.7883\tab 0.3836\par
+\tab MNHT\tab 0.1611\tab 0.2348\tab 0.8882\par
+\tab OVTN\tab -0.5168\tab 1.0059\tab 0.3692\par
+\tab PKLE\tab -0.9364\tab 0.4788\tab 0.6583\par
+\tab TMPL\tab -0.8749\tab 0.7190\tab 0.4543\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5417\par
+Maximum:\tab  0.7456\par
+Minimum:\tab  0.3098\par
+ \par
+Average variance of differences: 0.3050 \par
+ \par
+ \par
+\cf1\fs36 Testing the Environments.dominance (or dominance) effects separately\cf2\fs20\par
+ \par
+ \par
+ \par
+\cf1\fs32 REML variance components analysis\cf2\fs20\par
+ \par
+\pard\tx0\tx2340 Response variate:\tab LEN\par
+Fixed model:\tab Constant + SITE + addpred[120] + dompred[120] + pred[261] + SITE.addpred[261] + SITE.dompred[261] + addpred[306] + dompred[306] + pred[392] + SITE.addpred[392] + SITE.dompred[392] + pred[478] + SITE.addpred[478] + SITE.dompred[478] + pred[517] + SITE.addpred[517] + SITE.dompred[517] + addpred[697] + dompred[697]\par
+Random model:\tab LINE.SITE\par
+Number of units:\tab 3420\par
+ \par
+LINE.SITE used as residual term with covariance structure as below\par
+ \par
+Sparse algorithm with AI optimisation\par
+Units with missing data values included\par
+ \par
+ \par
+\cf1\fs28 Covariance structures defined for random model\cf2\fs20\par
+ \par
+Covariance structures defined within terms:\par
+ \par
+\pard\tx0\tx2925\tx4446\tqr\tx8424\tqr\tx9594 Term\tab Factor\tab Model\tab Order\tab No. rows\par
+LINE.SITE\tab LINE\tab Identity\tab 0\tab 380\par
+\tab SITE\tab Unstructured\tab 8\tab 9\par
+ \par
+ \par
+\cf1\fs28 Residual variance model\cf2\fs20\par
+ \par
+\pard\tx0\tx2106\tx3861\tx5616\tqr\tx8541\tqr\tx9711 Term\tab Factor\tab Model(order)\tab Parameter\tab Estimate\tab s.e.\par
+LINE.SITE\tab  \tab\tab Sigma2\tab 1.000\tab fixed\par
+\tab LINE\tab Identity\tab -        \tab -\tab -\par
+\tab SITE\tab Unstructured\tab v_11\tab  50.28\tab  3.94\par
+\tab  \tab  \tab v_21\tab  20.55\tab  2.97\par
+\tab  \tab  \tab v_22\tab  43.22\tab  3.57\par
+\tab  \tab  \tab v_31\tab  19.81\tab  2.47\par
+\tab  \tab  \tab v_32\tab  18.89\tab  2.36\par
+\tab  \tab  \tab v_33\tab  29.07\tab  2.37\par
+\tab  \tab  \tab v_41\tab  6.349\tab  2.751\par
+\tab  \tab  \tab v_42\tab  8.294\tab  2.664\par
+\tab  \tab  \tab v_43\tab  9.438\tab  2.211\par
+\tab  \tab  \tab v_44\tab  46.80\tab  3.66\par
+\tab  \tab  \tab v_51\tab  20.13\tab  2.78\par
+\tab  \tab  \tab v_52\tab  18.56\tab  2.65\par
+\tab  \tab  \tab v_53\tab  19.65\tab  2.23\par
+\tab  \tab  \tab v_54\tab  7.009\tab  2.499\par
+\tab  \tab  \tab v_55\tab  37.27\tab  3.08\par
+\tab  \tab  \tab v_61\tab  14.58\tab  3.27\par
+\tab  \tab  \tab v_62\tab  16.58\tab  3.05\par
+\tab  \tab  \tab v_63\tab  14.89\tab  2.56\par
+\tab  \tab  \tab v_64\tab  12.83\tab  3.08\par
+\tab  \tab  \tab v_65\tab  15.05\tab  2.92\par
+\tab  \tab  \tab v_66\tab  57.80\tab  4.65\par
+\tab  \tab  \tab v_71\tab  17.55\tab  2.70\par
+\tab  \tab  \tab v_72\tab  17.31\tab  2.59\par
+\tab  \tab  \tab v_73\tab  17.79\tab  2.20\par
+\tab  \tab  \tab v_74\tab  10.58\tab  2.49\par
+\tab  \tab  \tab v_75\tab  17.63\tab  2.47\par
+\tab  \tab  \tab v_76\tab  14.88\tab  2.89\par
+\tab  \tab  \tab v_77\tab  39.99\tab  3.14\par
+\tab  \tab  \tab v_81\tab  13.78\tab  3.44\par
+\tab  \tab  \tab v_82\tab  18.20\tab  3.31\par
+\tab  \tab  \tab v_83\tab  12.54\tab  2.55\par
+\tab  \tab  \tab v_84\tab  5.996\tab  3.159\par
+\tab  \tab  \tab v_85\tab  15.46\tab  2.97\par
+\tab  \tab  \tab v_86\tab  12.06\tab  3.69\par
+\tab  \tab  \tab v_87\tab  15.78\tab  3.08\par
+\tab  \tab  \tab v_88\tab  57.35\tab  4.87\par
+\tab  \tab  \tab v_91\tab  11.72\tab  2.36\par
+\tab  \tab  \tab v_92\tab  10.75\tab  2.33\par
+\tab  \tab  \tab v_93\tab  11.32\tab  1.89\par
+\tab  \tab  \tab v_94\tab  9.738\tab  2.282\par
+\tab  \tab  \tab v_95\tab  11.74\tab  2.15\par
+\tab  \tab  \tab v_96\tab  10.23\tab  2.64\par
+\tab  \tab  \tab v_97\tab  14.55\tab  2.19\par
+\tab  \tab  \tab v_98\tab  8.614\tab  2.682\par
+\tab  \tab  \tab v_99\tab  32.94\tab  2.58\par
+ \par
+\pard\keep  \par
+\cf1\fs28 Tests for fixed effects\cf2\fs20\par
+ \par
+Sequentially adding terms to fixed model\par
+ \par
+\pard\tx0\tqr\tx4914\tqr\tx5850\tqr\tx7488\tqr\tx8424\tqr\tx9360 Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+SITE\tab 1415.44\tab 8\tab 173.23\tab 323.4\tab  <0.001\par
+addpred[120]\tab 41.14\tab 2\tab 20.57\tab 354.3\tab  <0.001\par
+dompred[120]\tab 0.13\tab 1\tab 0.13\tab 354.1\tab  0.720\par
+pred[261]\tab 12.55\tab 3\tab 4.18\tab 356.0\tab  0.006\par
+SITE.addpred[261]\tab 25.63\tab 16\tab 1.56\tab 525.7\tab  0.074\par
+SITE.dompred[261]\tab 25.93\tab 8\tab 3.17\tab 326.1\tab  0.002\par
+addpred[306]\tab 27.51\tab 2\tab 13.76\tab 357.6\tab  <0.001\par
+dompred[306]\tab 0.23\tab 1\tab 0.23\tab 356.8\tab  0.635\par
+pred[392]\tab 19.55\tab 3\tab 6.52\tab 355.8\tab  <0.001\par
+SITE.addpred[392]\tab 26.42\tab 16\tab 1.61\tab 526.3\tab  0.061\par
+SITE.dompred[392]\tab 19.00\tab 8\tab 2.33\tab 330.1\tab  0.019\par
+pred[478]\tab 12.87\tab 3\tab 4.29\tab 355.3\tab  0.005\par
+SITE.addpred[478]\tab 32.26\tab 16\tab 1.97\tab 523.7\tab  0.013\par
+SITE.dompred[478]\tab 27.42\tab 8\tab 3.36\tab 327.2\tab  0.001\par
+pred[517]\tab 4.42\tab 3\tab 1.47\tab 355.5\tab  0.221\par
+SITE.addpred[517]\tab 48.81\tab 16\tab 2.98\tab 522.9\tab  <0.001\par
+SITE.dompred[517]\tab 6.01\tab 8\tab 0.74\tab 324.2\tab  0.660\par
+addpred[697]\tab 49.54\tab 2\tab 24.77\tab 356.8\tab  <0.001\par
+dompred[697]\tab 1.53\tab 1\tab 1.53\tab 355.4\tab  0.217\par
+ \par
+Dropping individual terms from full fixed model\par
+ \par
+Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+addpred[120]\tab 42.24\tab 2\tab 21.12\tab 354.3\tab  <0.001\par
+dompred[120]\tab 0.25\tab 1\tab 0.25\tab 354.1\tab  0.619\par
+SITE.addpred[261]\tab 25.48\tab 16\tab 1.56\tab 525.7\tab  0.076\par
+SITE.dompred[261]\tab 28.54\tab 8\tab 3.49\tab 326.1\tab  <0.001\par
+addpred[306]\tab 17.49\tab 2\tab 8.75\tab 357.6\tab  <0.001\par
+dompred[306]\tab 0.25\tab 1\tab 0.25\tab 356.8\tab  0.617\par
+SITE.addpred[392]\tab 24.52\tab 16\tab 1.50\tab 526.3\tab  0.096\par
+SITE.dompred[392]\tab 20.29\tab 8\tab 2.48\tab 330.1\tab  0.013\par
+SITE.addpred[478]\tab 32.08\tab 16\tab 1.96\tab 523.7\tab  0.014\par
+SITE.dompred[478]\tab 27.71\tab 8\tab 3.39\tab 327.2\tab  <0.001\par
+SITE.addpred[517]\tab 48.92\tab 16\tab 2.99\tab 522.9\tab  <0.001\par
+SITE.dompred[517]\tab 5.98\tab 8\tab 0.73\tab 324.2\tab  0.663\par
+addpred[697]\tab 49.28\tab 2\tab 24.64\tab 356.8\tab  <0.001\par
+dompred[697]\tab 1.53\tab 1\tab 1.53\tab 355.4\tab  0.217\par
+ \par
+\cf1\i\fs24 Message: denominator degrees of freedom for approximate F-tests are calculated using algebraic derivatives ignoring fixed/boundary/singular variance parameters.\cf2\i0\fs20\par
+ \par
+ \par
+\cf1\fs28 Table of effects for Constant\cf2\fs20\par
+ \par
+  46.63    Standard error: 0.405 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tqr\tx2340\tqr\tx3276\tqr\tx4212\tqr\tx5148\tqr\tx6084\tqr\tx7020\tqr\tx7956\tab SITE\tab BRKG\tab CLMB\tab KBSM\tab KING\tab LINC\tab MNHT\tab OVTN\tab PKLE\par
+\tab\tab 0.000\tab -3.990\tab -2.538\tab -10.649\tab 1.530\tab -5.005\tab -3.240\tab -7.826\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tab SITE\tab TMPL\par
+\tab\tab -9.960\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4505\par
+Maximum:\tab  0.5712\par
+Minimum:\tab  0.3223\par
+ \par
+Average variance of differences: 0.2067 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for addpred[120]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[120]\tab add2pr[120]\par
+\tab\tab 1.361\tab 0.701\par
+ \par
+ \par
+Standard error of differences: 0.2774 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for dompred[120]\cf2\fs20\par
+ \par
+  -0.1119    Standard error: 0.22509 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[261]\tab add2pr[261]\tab dompr[261]\par
+\tab\tab 0.1087\tab -1.0924\tab -0.3207\par
+ \par
+ \par
+Standard errors of differences\par
+\pard\keep  \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5285\par
+Maximum:\tab  0.5376\par
+Minimum:\tab  0.5235\par
+ \par
+Average variance of differences: 0.2793 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.addpred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tab *\tab addpr[261]\tab add2pr[261]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.0349\tab 0.7078\par
+\tab KBSM\tab -0.4364\tab 0.3944\par
+\tab KING\tab -1.1498\tab 0.5152\par
+\tab LINC\tab -0.8586\tab 0.0786\par
+\tab MNHT\tab -0.2255\tab 0.2882\par
+\tab OVTN\tab -0.8502\tab 0.6090\par
+\tab PKLE\tab 0.3223\tab 0.6043\par
+\tab TMPL\tab -0.4986\tab 0.9771\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5116\par
+Maximum:\tab  0.7134\par
+Minimum:\tab  0.3105\par
+ \par
+Average variance of differences: 0.2724 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.dompred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tab *\tab dompr[261]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\par
+\tab CLMB\tab -1.3452\par
+\tab KBSM\tab -0.2864\par
+\tab KING\tab -0.2273\par
+\tab LINC\tab -1.0119\par
+\tab MNHT\tab 0.3304\par
+\tab OVTN\tab -0.1549\par
+\tab PKLE\tab 0.3202\par
+\tab TMPL\tab -0.2301\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4404\par
+Maximum:\tab  0.5604\par
+Minimum:\tab  0.3123\par
+ \par
+Average variance of differences: 0.1976 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for addpred[306]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[306]\tab add2pr[306]\par
+\tab\tab -0.5094\tab -0.6846\par
+ \par
+ \par
+Standard error of differences: 0.3406 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for dompred[306]\cf2\fs20\par
+ \par
+  -0.1104    Standard error: 0.22035 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[392]\tab add2pr[392]\tab dompr[392]\par
+\tab\tab -0.7624\tab 0.0198\tab -0.8181\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5535\par
+Maximum:\tab  0.5824\par
+Minimum:\tab  0.4977\par
+ \par
+Average variance of differences: 0.3079 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.addpred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tab *\tab addpr[392]\tab add2pr[392]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.6605\tab -0.4499\par
+\tab KBSM\tab -0.0805\tab -0.2668\par
+\tab KING\tab 0.0014\tab -0.4089\par
+\tab LINC\tab -0.6532\tab -0.3572\par
+\tab MNHT\tab 0.0960\tab -1.0083\par
+\tab OVTN\tab -0.6075\tab -0.5142\par
+\tab PKLE\tab 0.3997\tab 0.1618\par
+\tab TMPL\tab -0.8362\tab -1.0049\par
+ \par
+\pard\keep  \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5165\par
+Maximum:\tab  0.7116\par
+Minimum:\tab  0.3196\par
+ \par
+Average variance of differences: 0.2759 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.dompred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tab *\tab dompr[392]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\par
+\tab CLMB\tab -0.0051\par
+\tab KBSM\tab 0.1797\par
+\tab KING\tab 1.7666\par
+\tab LINC\tab 0.1725\par
+\tab MNHT\tab 0.6155\par
+\tab OVTN\tab 0.0844\par
+\tab PKLE\tab 0.4670\par
+\tab TMPL\tab 0.9994\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4522\par
+Maximum:\tab  0.5721\par
+Minimum:\tab  0.3230\par
+ \par
+Average variance of differences: 0.2082 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[478]\tab add2pr[478]\tab dompr[478]\par
+\tab\tab 0.2662\tab 0.9204\tab 0.3022\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5353\par
+Maximum:\tab  0.5529\par
+Minimum:\tab  0.5172\par
+ \par
+Average variance of differences: 0.2867 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.addpred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tab *\tab addpr[478]\tab add2pr[478]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -0.0981\tab -0.5572\par
+\tab KBSM\tab -0.3195\tab 0.3502\par
+\tab KING\tab -0.5965\tab -0.6149\par
+\tab LINC\tab 0.1571\tab 0.3133\par
+\tab MNHT\tab -0.3631\tab -0.2807\par
+\tab OVTN\tab -0.1268\tab -1.1537\par
+\tab PKLE\tab -0.4420\tab -0.0134\par
+\tab TMPL\tab -0.0736\tab -0.4081\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5188\par
+Maximum:\tab  0.7285\par
+Minimum:\tab  0.3101\par
+ \par
+Average variance of differences: 0.2813 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.dompred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tab *\tab dompr[478]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\par
+\tab CLMB\tab 0.0760\par
+\tab KBSM\tab -0.0975\par
+\tab KING\tab -0.9629\par
+\tab LINC\tab 0.4602\par
+\tab MNHT\tab -0.7467\par
+\tab OVTN\tab 0.3742\par
+\tab PKLE\tab -1.4255\par
+\tab TMPL\tab -0.1644\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4365\par
+Maximum:\tab  0.5548\par
+Minimum:\tab  0.3096\par
+ \par
+\pard\keep Average variance of differences: 0.1941 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tqr\tx4213\tab *\line\tab addpr[517]\tab add2pr[517]\tab dompr[517]\par
+\tab\tab 0.7506\tab -0.8765\tab -0.7731\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5438\par
+Maximum:\tab  0.5578\par
+Minimum:\tab  0.5276\par
+ \par
+Average variance of differences: 0.2959 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.addpred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tab *\tab addpr[517]\tab add2pr[517]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\tab 0.0000\par
+\tab CLMB\tab -1.2119\tab 0.4710\par
+\tab KBSM\tab -0.6301\tab 0.5221\par
+\tab KING\tab -2.2751\tab -0.1697\par
+\tab LINC\tab -0.2362\tab 0.7883\par
+\tab MNHT\tab 0.1611\tab 0.2348\par
+\tab OVTN\tab -0.5168\tab 1.0059\par
+\tab PKLE\tab -0.9364\tab 0.4788\par
+\tab TMPL\tab -0.8749\tab 0.7190\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5112\par
+Maximum:\tab  0.7098\par
+Minimum:\tab  0.3098\par
+ \par
+Average variance of differences: 0.2719 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.dompred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tab *\tab dompr[517]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0000\par
+\tab CLMB\tab 0.6675\par
+\tab KBSM\tab 0.7249\par
+\tab KING\tab 0.5040\par
+\tab LINC\tab 0.3836\par
+\tab MNHT\tab 0.8882\par
+\tab OVTN\tab 0.3692\par
+\tab PKLE\tab 0.6583\par
+\tab TMPL\tab 0.4543\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4406\par
+Maximum:\tab  0.5586\par
+Minimum:\tab  0.3112\par
+ \par
+Average variance of differences: 0.1977 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for addpred[697]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[697]\tab add2pr[697]\par
+\tab\tab -1.257\tab -0.963\par
+ \par
+ \par
+Standard error of differences: 0.2990 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for dompred[697]\cf2\fs20\par
+ \par
+  -0.2720    Standard error: 0.21992 \par
+ \par
+\pard\keep\cf3\f1  902  ELSE\line  903    IF NVALUES(_cofactors).eq.1\line  904      IF _cofactors$[1].NE.C('*')\line  905        DUPLICATE _cofactors; NEWSTRUCTURE=POS\line  906      ENDIF\line  907    ENDIF\line  908    CAPTION 'At least 2 candidate qtls should be supplied for backward selection.';\\\line  909   STYLE=plaintext\line  910  ENDIF\line  911  IF NVALUES(POS).NE.C('*').AND.NVAL(POS).EQ.NVAL(_qtl_interactions)\line  912  QMESTIMATE [PRINT=summary,model,components,effects,wald; POPULATIONTYPE=CP; VCMODEL=un;\\\line  913   WORKSPACE=100] TRAIT=LEN; ENVIRONMENTS=SITE; GENOTYPES=LINE; CHROMOSOME=gp_linkage;\\\line  914   POSITION=gp_pos; ADDITIVE=gp_additive; ADD2PREDICTORS=gp_additive2; DOMINANCE=gp_dominance;\\\line  915   IDLOCI=gp_vnames; MKLOCI=gp_mkloci; IDMGENOTYPES=m_id; IDPARENTS=m_parentid; QTLSELECTED=POS;\\\line  916   INTERACTIONS=_qtl_interactions; DOMSELECTED=_qtl_seldominance_pos; DOMINTERACTIONS=_qtl_dominteractions;\\\line  917   QEFFECTS=EFF; QSE=SE; QSAVE=_qtl_save\line\cf2\f0  \par
+\cf1\fs36 Estimation of QTL effects from a multi-environment trial\cf2\fs20\par
+ \par
+ \par
+ \par
+\cf1\fs32 REML variance components analysis\cf2\fs20\par
+ \par
+\pard\tx0\tx2340 Response variate:\tab LEN\par
+Fixed model:\tab Constant + SITE + pred[120] + SITE.pred[261] + pred[306] + SITE.pred[392] + SITE.pred[478] + SITE.pred[517] + pred[697]\par
+Random model:\tab LINE.SITE\par
+Number of units:\tab 3420\par
+ \par
+LINE.SITE used as residual term with covariance structure as below\par
+ \par
+Sparse algorithm with AI optimisation\par
+Units with missing data values included\par
+ \par
+ \par
+\cf1\fs28 Covariance structures defined for random model\cf2\fs20\par
+ \par
+Covariance structures defined within terms:\par
+ \par
+\pard\tx0\tx2925\tx4446\tqr\tx8424\tqr\tx9594 Term\tab Factor\tab Model\tab Order\tab No. rows\par
+LINE.SITE\tab LINE\tab Identity\tab 0\tab 380\par
+\tab SITE\tab Unstructured\tab 8\tab 9\par
+ \par
+ \par
+\cf1\fs28 Residual variance model\cf2\fs20\par
+ \par
+\pard\tx0\tx2106\tx3861\tx5616\tqr\tx8541\tqr\tx9711 Term\tab Factor\tab Model(order)\tab Parameter\tab Estimate\tab s.e.\par
+LINE.SITE\tab  \tab\tab Sigma2\tab 1.000\tab fixed\par
+\tab LINE\tab Identity\tab -        \tab -\tab -\par
+\tab SITE\tab Unstructured\tab v_11\tab  50.89\tab  3.98\par
+\tab  \tab  \tab v_21\tab  20.57\tab  2.97\par
+\tab  \tab  \tab v_22\tab  43.09\tab  3.54\par
+\tab  \tab  \tab v_31\tab  19.79\tab  2.46\par
+\tab  \tab  \tab v_32\tab  18.75\tab  2.34\par
+\tab  \tab  \tab v_33\tab  28.81\tab  2.33\par
+\tab  \tab  \tab v_41\tab  6.517\tab  2.748\par
+\tab  \tab  \tab v_42\tab  8.087\tab  2.635\par
+\tab  \tab  \tab v_43\tab  9.210\tab  2.184\par
+\tab  \tab  \tab v_44\tab  46.43\tab  3.62\par
+\tab  \tab  \tab v_51\tab  20.51\tab  2.78\par
+\tab  \tab  \tab v_52\tab  18.50\tab  2.63\par
+\tab  \tab  \tab v_53\tab  19.52\tab  2.20\par
+\tab  \tab  \tab v_54\tab  6.990\tab  2.481\par
+\tab  \tab  \tab v_55\tab  37.31\tab  3.07\par
+\tab  \tab  \tab v_61\tab  14.69\tab  3.28\par
+\tab  \tab  \tab v_62\tab  16.58\tab  3.03\par
+\tab  \tab  \tab v_63\tab  14.79\tab  2.54\par
+\tab  \tab  \tab v_64\tab  12.62\tab  3.06\par
+\tab  \tab  \tab v_65\tab  15.10\tab  2.92\par
+\tab  \tab  \tab v_66\tab  57.80\tab  4.63\par
+\tab  \tab  \tab v_71\tab  17.95\tab  2.70\par
+\tab  \tab  \tab v_72\tab  17.21\tab  2.57\par
+\tab  \tab  \tab v_73\tab  17.53\tab  2.17\par
+\tab  \tab  \tab v_74\tab  10.44\tab  2.46\par
+\tab  \tab  \tab v_75\tab  17.69\tab  2.45\par
+\tab  \tab  \tab v_76\tab  14.83\tab  2.88\par
+\tab  \tab  \tab v_77\tab  39.86\tab  3.12\par
+\tab  \tab  \tab v_81\tab  13.86\tab  3.45\par
+\tab  \tab  \tab v_82\tab  18.11\tab  3.29\par
+\tab  \tab  \tab v_83\tab  12.39\tab  2.52\par
+\tab  \tab  \tab v_84\tab  5.790\tab  3.131\par
+\tab  \tab  \tab v_85\tab  15.39\tab  2.95\par
+\tab  \tab  \tab v_86\tab  12.05\tab  3.67\par
+\tab  \tab  \tab v_87\tab  15.60\tab  3.06\par
+\tab  \tab  \tab v_88\tab  57.12\tab  4.84\par
+\tab  \tab  \tab v_91\tab  12.02\tab  2.37\par
+\tab  \tab  \tab v_92\tab  10.69\tab  2.31\par
+\tab  \tab  \tab v_93\tab  11.16\tab  1.87\par
+\tab  \tab  \tab v_94\tab  9.593\tab  2.262\par
+\tab  \tab  \tab v_95\tab  11.82\tab  2.14\par
+\tab  \tab  \tab v_96\tab  10.22\tab  2.62\par
+\tab  \tab  \tab v_97\tab  14.53\tab  2.17\par
+\tab  \tab  \tab v_98\tab  8.507\tab  2.670\par
+\tab  \tab  \tab v_99\tab  32.88\tab  2.57\par
+ \par
+\pard\keep  \par
+\cf1\fs28 Tests for fixed effects\cf2\fs20\par
+ \par
+Sequentially adding terms to fixed model\par
+ \par
+\pard\tx0\tqr\tx4914\tqr\tx5850\tqr\tx7488\tqr\tx8424\tqr\tx9360 Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+SITE\tab 1418.58\tab 8\tab 173.63\tab 324.7\tab  <0.001\par
+pred[120]\tab 41.60\tab 2\tab 20.80\tab 358.5\tab  <0.001\par
+SITE.pred[261]\tab 64.21\tab 27\tab 2.31\tab 716.8\tab  <0.001\par
+pred[306]\tab 27.60\tab 2\tab 13.80\tab 360.7\tab  <0.001\par
+SITE.pred[392]\tab 65.24\tab 27\tab 2.35\tab 720.0\tab  <0.001\par
+SITE.pred[478]\tab 72.66\tab 27\tab 2.62\tab 718.2\tab  <0.001\par
+SITE.pred[517]\tab 51.35\tab 18\tab 2.78\tab 540.3\tab  <0.001\par
+pred[697]\tab 50.56\tab 2\tab 25.28\tab 360.8\tab  <0.001\par
+ \par
+Dropping individual terms from full fixed model\par
+ \par
+Fixed term\tab Wald statistic\tab n.d.f.\tab F statistic\tab d.d.f.\tab F pr\par
+pred[120]\tab 42.67\tab 2\tab 21.34\tab 358.5\tab  <0.001\par
+SITE.pred[261]\tab 69.78\tab 27\tab 2.52\tab 716.8\tab  <0.001\par
+pred[306]\tab 18.77\tab 2\tab 9.39\tab 360.7\tab  <0.001\par
+SITE.pred[392]\tab 70.00\tab 27\tab 2.52\tab 720.0\tab  <0.001\par
+SITE.pred[478]\tab 70.66\tab 27\tab 2.55\tab 718.2\tab  <0.001\par
+SITE.pred[517]\tab 53.05\tab 18\tab 2.87\tab 540.3\tab  <0.001\par
+pred[697]\tab 50.56\tab 2\tab 25.28\tab 360.8\tab  <0.001\par
+ \par
+\cf1\i\fs24 Message: denominator degrees of freedom for approximate F-tests are calculated using algebraic derivatives ignoring fixed/boundary/singular variance parameters.\cf2\i0\fs20\par
+ \par
+ \par
+\cf1\fs28 Table of effects for Constant\cf2\fs20\par
+ \par
+  46.73    Standard error: 0.399 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tqr\tx2340\tqr\tx3276\tqr\tx4212\tqr\tx5148\tqr\tx6084\tqr\tx7020\tqr\tx7956\tab SITE\tab BRKG\tab CLMB\tab KBSM\tab KING\tab LINC\tab MNHT\tab OVTN\tab PKLE\par
+\tab\tab 0.000\tab -4.052\tab -2.597\tab -10.693\tab 1.496\tab -5.097\tab -3.271\tab -7.881\par
+ \par
+ \par
+\pard\tqr\tx468\tqr\tx1404\tab SITE\tab TMPL\par
+\tab\tab -9.996\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4481\par
+Maximum:\tab  0.5674\par
+Minimum:\tab  0.3217\par
+ \par
+Average variance of differences: 0.2045 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[120]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[120]\tab add2pr[120]\par
+\tab\tab 1.357\tab 0.712\par
+ \par
+ \par
+Standard error of differences: 0.2756 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[261]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[261]\tab add2pr[261]\tab dompr[261]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.0554\tab -1.1366\tab -0.3222\par
+\tab CLMB\tab 0.0579\tab -0.3942\tab -1.6712\par
+\tab KBSM\tab -0.3466\tab -0.6999\tab -0.6182\par
+\tab KING\tab -1.0607\tab -0.6005\tab -0.5482\par
+\tab LINC\tab -0.7695\tab -1.0382\tab -1.3328\par
+\tab MNHT\tab -0.1173\tab -0.8030\tab 0.0034\par
+\tab OVTN\tab -0.7674\tab -0.5109\tab -0.4824\par
+\tab PKLE\tab 0.4146\tab -0.5004\tab -0.0088\par
+\tab TMPL\tab -0.4151\tab -0.1397\tab -0.5545\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4904\par
+Maximum:\tab  0.6139\par
+Minimum:\tab  0.3102\par
+ \par
+Average variance of differences: 0.2443 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[306]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[306]\tab add2pr[306]\par
+\tab\tab -0.5239\tab -0.7045\par
+ \par
+ \par
+Standard error of differences: 0.3305 \par
+ \par
+ \par
+\pard\keep\cf1\fs28 Table of effects for SITE.pred[392]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[392]\tab add2pr[392]\tab dompr[392]\par
+\tab SITE\tab  \par
+\tab BRKG\tab -0.7451\tab 0.0953\tab -0.7427\par
+\tab CLMB\tab -1.4092\tab -0.4185\tab -0.8073\par
+\tab KBSM\tab -0.8287\tab -0.2460\tab -0.6230\par
+\tab KING\tab -0.7558\tab -0.3797\tab 0.9762\par
+\tab LINC\tab -1.4168\tab -0.3058\tab -0.6263\par
+\tab MNHT\tab -0.6428\tab -0.9804\tab -0.2010\par
+\tab OVTN\tab -1.3575\tab -0.4606\tab -0.6976\par
+\tab PKLE\tab -0.3508\tab 0.1927\tab -0.3345\par
+\tab TMPL\tab -1.5900\tab -0.9557\tab 0.2155\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.5071\par
+Maximum:\tab  0.6519\par
+Minimum:\tab  0.3190\par
+ \par
+Average variance of differences: 0.2613 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[478]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tqr\tx5733\tab *\tab addpr[478]\tab add2pr[478]\tab dompr[478]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.2210\tab 0.8658\tab 0.2553\par
+\tab CLMB\tab 0.1510\tab 0.3527\tab 0.3552\par
+\tab KBSM\tab -0.0746\tab 1.2642\tab 0.1876\par
+\tab KING\tab -0.3552\tab 0.2873\tab -0.6965\par
+\tab LINC\tab 0.4014\tab 1.2070\tab 0.7357\par
+\tab MNHT\tab -0.1061\tab 0.6412\tab -0.4639\par
+\tab OVTN\tab 0.1124\tab -0.2622\tab 0.6416\par
+\tab PKLE\tab -0.1939\tab 0.8996\tab -1.1441\par
+\tab TMPL\tab 0.1678\tab 0.4878\tab 0.1007\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4908\par
+Maximum:\tab  0.6166\par
+Minimum:\tab  0.3097\par
+ \par
+Average variance of differences: 0.2448 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for SITE.pred[517]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1521\tqr\tx2925\tqr\tx4329\tab *\tab addpr[517]\tab add2pr[517]\par
+\tab SITE\tab  \par
+\tab BRKG\tab 0.7293\tab -0.8270\par
+\tab CLMB\tab -0.4660\tab -0.3650\par
+\tab KBSM\tab 0.1198\tab -0.3207\par
+\tab KING\tab -1.5328\tab -1.0039\par
+\tab LINC\tab 0.5028\tab -0.0309\par
+\tab MNHT\tab 0.8977\tab -0.6096\par
+\tab OVTN\tab 0.2236\tab 0.1830\par
+\tab PKLE\tab -0.1880\tab -0.3475\par
+\tab TMPL\tab -0.1314\tab -0.1082\par
+ \par
+ \par
+Standard errors of differences\par
+ \par
+\pard\tx0\tqr\tx3510 Average:\tab  0.4769\par
+Maximum:\tab  0.6088\par
+Minimum:\tab  0.3094\par
+ \par
+Average variance of differences: 0.2316 \par
+ \par
+ \par
+\cf1\fs28 Table of effects for pred[697]\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1\tqr\tx1405\tqr\tx2809\tab *\line\tab addpr[697]\tab add2pr[697]\par
+\tab\tab -1.247\tab -0.989\par
+ \par
+ \par
+Standard error of differences: 0.2949 \par
+ \par
+\pard\keep  \par
+\cf1\fs32 Summary\cf2\fs20\par
+ \par
+ \par
+Trait: LEN\par
+Population type: CP\par
+Number of genotypes: 380\par
+Number of environments: 9\par
+Number of linkage groups: 18\par
+Number of markers: 738\par
+Variance-covariance model: UNSTRUCTURED\par
+ \par
+\cf1\fs32 List of QTLs\cf2\fs20\par
+ \par
+ \par
+\pard\tqr\tx1053\tx1170\tqr\tx5382\tqr\tx6552\tqr\tx7956\tqr\tx9126\tab Locus no.\tab   Locus name\tab Linkage group\tab Position\tab -log10(P)\tab QTLxE\par
+\tab 120\tab   Chr02K_62.598826\tab 2K\tab 77.89\tab 9.266\tab no\par
+\tab 261\tab   Chr03N_26.099983\tab 3N\tab 62.06\tab 4.919\tab yes\par
+\tab 306\tab   Chr04K_18.145014\tab 4K\tab 30.03\tab 4.077\tab no\par
+\tab 392\tab   Chr05K_50.651488\tab 5K\tab 64.46\tab 4.950\tab yes\par
+\tab 478\tab   Chr06K_31.834459\tab 6K\tab 29.96\tab 5.044\tab yes\par
+\tab 517\tab   Chr06N_48.768076\tab 6N\tab 54.19\tab 4.588\tab yes\par
+\tab 697\tab   Chr09N_18.617122\tab 9N\tab 38.02\tab 10.980\tab no\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr02K_62.598826\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 2K position 77.89\cf2\fs20\par
+ \par
+ \par
+\pard\tx0\tqr\tx2808\tqr\tx3861\tqr\tx4914\tqr\tx5967\tqr\tx7020\tqr\tx8073 Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+CLMB\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+KBSM\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+KING\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+LINC\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+MNHT\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+OVTN\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+PKLE\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+TMPL\tab  1.357\tab  0.218\tab  0.000\tab  0.0\tab  77.89\tab  77.89\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr03N_26.099983\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 3N position 62.06\cf2\fs20\par
+ \par
+ \par
+Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  0.055\tab  0.388\tab  0.887\tab  0.0\tab  *\tab  *\par
+CLMB\tab  0.058\tab  0.369\tab  0.875\tab  0.0\tab  *\tab  *\par
+KBSM\tab  0.347\tab  0.298\tab  0.244\tab  0.0\tab  *\tab  *\par
+KING\tab  1.061\tab  0.373\tab  0.004\tab  0.0\tab  62.06\tab  62.06\par
+LINC\tab  0.769\tab  0.344\tab  0.025\tab  0.0\tab  62.06\tab  62.06\par
+MNHT\tab  0.117\tab  0.423\tab  0.782\tab  0.0\tab  *\tab  *\par
+OVTN\tab  0.767\tab  0.343\tab  0.025\tab  0.0\tab  62.06\tab  62.06\par
+PKLE\tab  0.415\tab  0.443\tab  0.349\tab  0.0\tab  *\tab  *\par
+TMPL\tab  0.415\tab  0.313\tab  0.184\tab  0.0\tab  *\tab  *\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr04K_18.145014\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 4K position 30.03\cf2\fs20\par
+ \par
+ \par
+Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+CLMB\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+KBSM\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+KING\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+LINC\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+MNHT\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+OVTN\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+PKLE\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+TMPL\tab  0.524\tab  0.215\tab  0.015\tab  0.0\tab  30.03\tab  30.03\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr05K_50.651488\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 5K position 64.46\cf2\fs20\par
+ \par
+ \par
+Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  0.745\tab  0.403\tab  0.065\tab  0.0\tab  *\tab  *\par
+CLMB\tab  1.409\tab  0.385\tab  0.000\tab  0.0\tab  64.46\tab  64.46\par
+KBSM\tab  0.829\tab  0.307\tab  0.007\tab  0.0\tab  64.46\tab  64.46\par
+KING\tab  0.756\tab  0.386\tab  0.050\tab  0.0\tab  *\tab  *\par
+LINC\tab  1.417\tab  0.361\tab  0.000\tab  0.0\tab  64.46\tab  64.46\par
+MNHT\tab  0.643\tab  0.440\tab  0.144\tab  0.0\tab  *\tab  *\par
+OVTN\tab  1.358\tab  0.356\tab  0.000\tab  0.0\tab  64.46\tab  64.46\par
+PKLE\tab  0.351\tab  0.460\tab  0.446\tab  0.0\tab  *\tab  *\par
+TMPL\tab  1.590\tab  0.323\tab  0.000\tab  0.0\tab  64.46\tab  64.46\par
+ \par
+\pard\keep  \par
+\cf1\fs32 QTL (Locus name): Chr06K_31.834459\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 6K position 29.96\cf2\fs20\par
+ \par
+ \par
+\pard\tx0\tqr\tx2808\tqr\tx3861\tqr\tx4914\tqr\tx5967\tqr\tx7020\tqr\tx8073 Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  0.221\tab  0.392\tab  0.572\tab  0.0\tab  *\tab  *\par
+CLMB\tab  0.151\tab  0.374\tab  0.686\tab  0.0\tab  *\tab  *\par
+KBSM\tab  0.075\tab  0.300\tab  0.804\tab  0.0\tab  *\tab  *\par
+KING\tab  0.355\tab  0.374\tab  0.342\tab  0.0\tab  *\tab  *\par
+LINC\tab  0.401\tab  0.347\tab  0.248\tab  0.0\tab  *\tab  *\par
+MNHT\tab  0.106\tab  0.427\tab  0.804\tab  0.0\tab  *\tab  *\par
+OVTN\tab  0.112\tab  0.344\tab  0.744\tab  0.0\tab  *\tab  *\par
+PKLE\tab  0.194\tab  0.445\tab  0.663\tab  0.0\tab  *\tab  *\par
+TMPL\tab  0.168\tab  0.315\tab  0.594\tab  0.0\tab  *\tab  *\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr06N_48.768076\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 6N position 54.19\cf2\fs20\par
+ \par
+ \par
+Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  0.729\tab  0.390\tab  0.061\tab  0.0\tab  *\tab  *\par
+CLMB\tab  0.466\tab  0.372\tab  0.211\tab  0.0\tab  *\tab  *\par
+KBSM\tab  0.120\tab  0.299\tab  0.689\tab  0.0\tab  *\tab  *\par
+KING\tab  1.533\tab  0.374\tab  0.000\tab  0.0\tab  54.19\tab  54.19\par
+LINC\tab  0.503\tab  0.346\tab  0.146\tab  0.0\tab  *\tab  *\par
+MNHT\tab  0.898\tab  0.427\tab  0.035\tab  0.0\tab  54.19\tab  54.19\par
+OVTN\tab  0.224\tab  0.345\tab  0.517\tab  0.0\tab  *\tab  *\par
+PKLE\tab  0.188\tab  0.442\tab  0.671\tab  0.0\tab  *\tab  *\par
+TMPL\tab  0.131\tab  0.314\tab  0.675\tab  0.0\tab  *\tab  *\par
+ \par
+ \par
+\cf1\fs32 QTL (Locus name): Chr09N_18.617122\cf2\fs20\par
+ \par
+ \par
+\cf1\fs28 Location: linkage group 9N position 38.02\cf2\fs20\par
+ \par
+ \par
+Environment\tab Effect\tab s.e.\tab P\tab %Expl.\tab CI_LL\tab CI_UL\par
+\tab\tab\tab\tab var.\tab\tab\par
+BRKG\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+CLMB\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+KBSM\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+KING\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+LINC\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+MNHT\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+OVTN\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+PKLE\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+TMPL\tab  1.247\tab  0.219\tab  0.000\tab  0.0\tab  38.02\tab  38.02\par
+ \par
+\pard\keep\tx0\tqr\tx2808\tqr\tx3861\tqr\tx4914\tqr\tx5967\tqr\tx7020\tqr\tx8073\cf3\f1  918  DELETE [REDEFINE=yes] _subchrom, _subpos, _submkname, _subgroup, _subqxe\line  919  SUBSET [CONDITION=gp_mkloci.eq.1] gp_linkage,gp_pos,gp_vnames; NEWV=_subchrom, _subpos,\\\line  920   _submkname\line  921  GROUPS _qtl_save['chromosomes']; FACTOR=_subgroup\line  922  IF NVALUES(_qtl_save['qtlxe']).NE.C('*')\line  923    CALCULATE _subqxe = NEWLEVELS(_qtl_save['qtlxe']).eq.2\line  924    DQMAP CHROMOSOME=_subchrom; POSITIONS=_subpos; MKNAMES=_submkname; QNAMES=_qtl_save['markernames']\\\line  925  ; QCHROMOSOME=_subgroup; QPOSITIONS=_qtl_save['positions']; QINTERACTIONS=_subqxe\line  926  ELSE\line  927    DQMAP CHROMOSOME=_subchrom; POSITIONS=_subpos; MKNAMES=_submkname; QNAMES=_qtl_save['markernames']\\\line  928  ; QCHROMOSOME=_subgroup; QPOSITIONS=_qtl_save['positions']\line  929  ENDIF\line  930  DELETE [REDEFINE=yes] _nEnv,_nqtl,_nqtl1,_nEnv1,_table,_setable,_Qtl,_Envi,_eupper,\\\line  931  _elower,_rgb,_rgb2,_tttitle\line  932  CALCULATE _nEnv,_nqtl = NVALUES(_qtl_save['envnames'],_qtl_save['markernames'])\line  933  FACTOR [LABELS=_qtl_save['markernames'] ; VALUES=#_nEnv(1..._nqtl)] _Qtl\line  934  FACTOR [LABELS=_qtl_save['envnames']; VALUES=(1..._nEnv)#_nqtl] _Envi\line  935  TABLE [CLASS=_Envi,_Qtl] _table,_setable; VALUES=!(#_qtl_save['qeffects'][1][]),!(#_qtl_save['qse']\\\line  936  [1][])\line  937  CALCULATE _eupper = _table + _setable\line  938  CALCULATE _elower = _table - _setable\line  939  CALCULATE _nqtl1,_nEnv1 = _nqtl, _nEnv + 1\line  940  DCOLOURS [METHOD=linear] START=2('red'); END=2('yellow'); NCOLOUR=_nqtl,_nEnv; RGB=_rgb,\\\line  941  _rgb2\line  942  PEN 2..._nqtl1; COLOUR=#_rgb\line  943  FRAME 20,21; XUPPER=0.8,1; XLOWER=0,0.8; YUPPER=1,0.93; YLOWER=0,0\line  944  YAXIS 20; TITLE='QTLxE additive effects'\line  945  XAXIS 20; TITLE= 'Environment'\line  946  TXCONSTRUCT [TEXT=_ttrait] 'Trait: ',_qtl_save['trait']\line  947  DBARCHART [TITLE=_ttrait; WINDOW=20; KEYWINDOW=21; KEYDESCRIPTION='           QTL';\\\line  948   BELOW=include] _table; PEN=!(2..._nqtl1); UPPERERRORBARS=_eupper; LOWERERRORBARS=_elower\line  949  PEN 2..._nEnv1 ; COLOUR=#_rgb2\line  950  XAXIS 20; TITLE= 'QTL'\line  951  DBARCHART [TITLE=_ttrait; WINDOW=20; KEYWINDOW=21; KEYDESCRIPTION='Environment'; BELOW=include]\\\line  952   _table; PEN=!(2..._nEnv1); XFACTOR=_Qtl; UPPERERRORBARS=_eupper; LOWERERRORBARS=_elower\line  953  FSPREADSHEET  POS,EFF[][],SE[][]\line  954  ELSIF NVAL(POS).NE.NVAL(_qtl_interactions)\line  955    CAPTION 'The number of selected QTLs does not match the number of values in the interaction logical variate.';\\\line  956   STYLE=plaintext\line  957  ELSE\line  958    CAPTION 'No selected qtls to estimate.'; STYLE=plaintext\line  959  ENDIF\line\pard\tx240\tx480\tx720\tx960\tx1200\tx1440\tx1680\tx1920\tx2160\tx2400\tx2640\tx2880\tx3120\tx3360\tx3600\tx3840\tx4080\tx4320\tx4560\tx4800\tx5040\tx5280\tx5520\tx5760\tx6000\tx6240\tx6480\tx6720\tx6960\tx7200\tx7440\tx7680\cf2\protect\f2\par
+}
+ 
