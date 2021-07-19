@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# large gwas files
+gwas_effects*
+Full_mash_model*
+Clumped_*
