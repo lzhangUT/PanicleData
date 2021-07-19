@@ -1,0 +1,226 @@
+---
+title: "GWAS Overlap Analysis"
+author: "Alice MacQueen"
+date: "7/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(bigsnpr)
+library(tidyverse)
+library(ComplexUpset)
+library(cowplot)
+library(matrixStats)
+source("../../../Functions_ggplot-theme-adjustments_2018-01-03.R")
+```
+
+# Load gwas effects
+
+```{r}
+gwas1 <- big_attach("../analysis/mash/gwas_effects_kinship_All.rds")
+gwas1$ncol
+colnames1 <- read_csv("../analysis/mash/gwas_effects_kinship_All_column_names.csv")
+gwas_meta1 <- read_csv("../analysis/mash/gwas_effects_kinship_All_associated_metadata.csv")
+```
+
+
+```{r}
+gwas2 <- big_attach("../analysis/mash/gwas_effects_kinship_geno_subset.rds")
+colnames2 <- read_csv("../analysis/mash/gwas_effects_kinship_geno_subset_column_names.csv")
+gwas_meta2 <- read_csv("../analysis/mash/gwas_effects_kinship_geno_subset_associated_metadata.csv")
+```
+
+
+```{r}
+gwas3 <- big_attach("../analysis/mash/gwas_effects_PLANT_ID_All.rds")
+colnames3 <- read_csv("../analysis/mash/gwas_effects_PLANT_ID_All_column_names.csv")
+gwas_meta3 <- read_csv("../analysis/mash/gwas_effects_PLANT_ID_All_associated_metadata.csv")
+```
+
+```{r}
+gwas4 <- big_attach("../analysis/mash/gwas_effects_PLANT_ID_geno_subset.rds")
+colnames4 <- read_csv("../analysis/mash/gwas_effects_PLANT_ID_geno_subset_column_names.csv")
+gwas_meta4 <- read_csv("../analysis/mash/gwas_effects_PLANT_ID_geno_subset_associated_metadata.csv")
+
+```
+
+
+
+
+What is contained in gwas effects file?
+```{r}
+str(gwas1)
+gwas_meta1
+colnames1
+
+```
+
+
+# 1. Compare effects for the same phenotype from different BLUP/kinship models
+
+
+
+
+# ----------
+# 2. How do top SNPs overlap between phenotypes?
+
+```{r}
+thresholdFBM <- function(X, ind, thr) { #, quantile = NA) {
+  #if(!is.na(quantile)) {
+  #thr <- quantile(X[, ind], quantile)
+  #}
+  case_when(X[, ind] > thr ~ TRUE,
+            TRUE ~ FALSE)
+}
+log10pmax_f <- function(X, ind.col) rowMaxs(as.matrix(X[, ind.col]))
+
+big_upset_df <- function(gwas, thr = 7, quantile = NA, metadata){
+  gwas_ok <- floor(gwas$ncol / 3)
+  ind_p <- (1:(gwas_ok))*3
+  colnames_fbm <- metadata$phe
+  #gwas$add_columns(ncol_add = 1)
+  
+  thr_df <- big_apply(gwas, a.FUN = function(X, ind) rowMaxs(as.matrix(gwas[, ind])), 
+                      ind = ind_p, a.combine = 'c', block.size = 100)
+  gwas[,(sum(gwas_ok)*3 + 1)] <- thr_df
+  thr_df <- which(thr_df > thr)
+  thr_df <- big_copy(gwas, ind.row = thr_df, ind.col = ind_p)
+
+  for (j in seq_along(1:thr_df$ncol)) {  # standardize one gwas at a time.
+  thr_df[, j] <- big_apply(thr_df, a.FUN = thresholdFBM, ind = j, thr = thr,
+                              a.combine = 'plus')
+  }
+  
+  return(thr_df)
+}
+
+thr_fbm <- big_upset_df(gwas2, thr = 7, metadata = gwas_meta2)
+
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- gwas_meta2$phe
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+
+```
+
+```{r}
+thr_fbm <- big_upset_df(gwas1, thr = 7, metadata = gwas_meta)
+
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- gwas_meta1$phe
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+save_plot(filename = "../analysis/mash/Upset_plot_Kinship_GWAS_All_genotypes.png", plot = last_plot(), base_height = 6)
+
+thr_fbm <- big_upset_df(gwas2, thr = 7, metadata = gwas_meta)
+
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- gwas_meta2$phe
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+save_plot(filename = "../analysis/mash/Upset_plot_Kinship_GWAS_genotype_subset.png", plot = last_plot(), base_height = 6)
+```
+
+
+## kinship BLUPs: with and without subsetting genotypes. May not do this.
+
+```{r}
+gwas <- big_copy(gwas1, ind.col = 1:27)
+gwas$ncol
+
+gwas$add_columns(ncol_add = 28)
+gwas$ncol
+
+for(i in 1:27){
+  gwas[,27+i] <- gwas2[,i]
+  gc()
+}
+
+```
+
+```{r}
+gwas_meta <- rbind(gwas_meta1, gwas_meta2)
+
+thr_fbm <- big_upset_df(gwas, thr = 7, metadata = gwas_meta)
+
+thr_fbm$nrow
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- c(paste0("All_", gwas_meta1$phe), 
+                      paste0("geno_subset_", gwas_meta2$phe))
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+save_plot(filename = "../analysis/mash/Upset_plot_Kinship_GWAS_All_vs_geno_subset.png", plot = last_plot(), base_height = 10, base_asp = 1.8)
+```
+
+
+## PLANT_ID BLUPs: with and without subsetting genotypes
+```{r}
+gwasP <- big_copy(gwas3, ind.col = 1:27)
+gwasP$ncol
+
+gwasP$add_columns(ncol_add = 28)
+gwasP$ncol
+
+for(i in 1:27){
+  gwasP[,27+i] <- gwas4[,i]
+  gc()
+}
+
+```
+
+```{r}
+gwas_metaP <- rbind(gwas_meta3, gwas_meta4)
+
+thr_fbm <- big_upset_df(gwasP, thr = 7, metadata = gwas_metaP)
+
+thr_fbm$nrow
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- c(paste0("All_", gwas_meta3$phe), 
+                      paste0("geno_subset_", gwas_meta4$phe))
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+save_plot(filename = "../analysis/mash/Upset_plot_PLANT_ID_GWAS_All_vs_geno_subset.png", plot = last_plot(), base_height = 10, base_asp = 1.8)
+```
+
+
+## kinship BLUPs vs PLANT_ID BLUPs
+```{r}
+gwasgeno <- big_copy(gwas2, ind.col = 1:27)
+gwasgeno$ncol
+
+gwasgeno$add_columns(ncol_add = 28)
+gwasgeno$ncol
+
+for(i in 1:27){
+  gwasgeno[,27+i] <- gwas4[,i]
+  gc()
+}
+
+```
+
+```{r}
+gwas_metageno <- rbind(gwas_meta2, gwas_meta4)
+
+thr_fbm <- big_upset_df(gwasgeno, thr = 7, metadata = gwas_metageno)
+
+thr_fbm$nrow
+thr_df <- thr_fbm[1:thr_fbm$nrow, 1:thr_fbm$ncol]
+colnames(thr_df) <- c(paste0("Kinship_", gwas_meta3$phe), 
+                      paste0("PLANT_ID_", gwas_meta4$phe))
+thr_df <- as_tibble(thr_df)
+
+upset(thr_df, colnames(thr_df), min_size = 1, name = "Significant at -log10p > 7")
+save_plot(filename = "../analysis/mash/Upset_plot_kinship_vs_PLANT_ID_GWAS.png", plot = last_plot(), base_height = 10, base_asp = 1.8)
+```
+
+
+# 3. Takeaways and annotations
+kinship model gives more significant SNPs. Kinship model of geno subset gives the most overlaps of univariate GWAS, though this is not overwhelming.
+
+

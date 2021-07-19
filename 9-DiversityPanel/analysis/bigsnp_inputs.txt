@@ -1,0 +1,7 @@
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_363g_Midwest_and_Gulf_subset_maf0.05.rds
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_134g_Midwest_K_subset_maf0.05.rds
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_229g_Gulf_K_subset_maf0.05.rds
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_267g_Atlantic_K_subset_maf0.05.rds
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_401g_Midwest_and_Atlantic_subset_maf0.05.rds
+~/Github/pvdiv-genome/genetic_subpops/kinship/Pvirgatum_V5_GWAS_496g_Gulf_and_Atlantic_subset_maf0.05.rds
+~/Github/pvdiv-genome/big_three/Pvirgatum_V5_GWAS_630g_33M_big_three.rds
