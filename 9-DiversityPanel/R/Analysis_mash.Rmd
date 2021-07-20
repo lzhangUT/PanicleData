@@ -1,0 +1,217 @@
+---
+title: "Mash overlap analysis"
+author: "Alice MacQueen"
+date: 2021-07-19
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(bigsnpr)
+library(tidyverse)
+library(ComplexUpset)
+library(cowplot)
+library(matrixStats)
+source("../../../Functions_ggplot-theme-adjustments_2018-01-03.R")
+```
+
+#
+
+```{r}
+mashA <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_All.csv")
+
+mashG <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_geno_subset.csv")
+```
+
+```{r}
+mashA %>%
+  filter(NumSigCond_All > 0)
+
+mashG %>%
+  filter(NumSigCond_GSub > 0)
+```
+30553 sig in A
+45422 sig in G
+20538 sig & in mashG & mashA
+
+```{r}
+mashA <- mashA %>%
+  rename(log10BF_All = "log10BayesFactor", NumSigCond_All = "Num_Sig_Conditions") 
+
+mashG <- mashG %>%
+  rename(log10BF_GSub = "log10BayesFactor", NumSigCond_GSub = "Num_Sig_Conditions")
+
+mash <- mashA %>%
+  full_join(mashG)
+
+
+mashG %>%
+  select(CHR, POS) %>%
+  inner_join(mashA) %>%
+  filter(Num_Sig_Conditions > 0)
+
+mash %>%
+  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  geom_hex() +
+  scale_fill_gradient(trans = "log") +
+  geom_smooth() +
+  geom_abline(slope = 1, linetype = 2)
+```
+729052 in mashA not mashG
+723362 in mashG not mashA
+
+1968489 in mashG & mashA
+
+20538 sig & in mashG & mashA
+
+```{r}
+mash %>%
+  group_by(log10BF_All > 1.3, log10BF_GSub > 1.3) %>%
+  tally()
+
+mash %>%
+  filter(log10BF_All > 2 | log10BF_GSub > 2) %>%
+  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  geom_hex() +
+  scale_fill_gradient(trans = "log") +
+  geom_smooth() +
+  geom_abline(slope = 1, linetype = 2)
+
+mash_sigA <- mashA %>%
+  filter(log10BF_All >= 2)
+mash_sigB <- mash %>%
+  filter(log10BF_All > 2 & log10BF_GSub > 2)
+```
+2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
+
+```{r}
+# devtools::install_github("alice-macqueen/switchgrassGWAS")
+library(switchgrassGWAS)
+library(AnnotationDbi)
+library(VariantAnnotation)
+txdb <- loadDb(file = "../../../pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
+
+anno_tables <- pvdiv_table_topsnps(df = )
+```
+
+```{r}
+mash_sigA <- mashA %>%
+
+filter(log10BF_All >= 2)
+
+mash_sigB <- mash %>%
+
+filter(log10BF_All > 2 & log10BF_GSub > 2)
+
+```
+2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
+
+```{r}
+# devtools::install_github("alice-macqueen/switchgrassGWAS")
+
+library(switchgrassGWAS)
+library(AnnotationDbi)
+library(VariantAnnotation)
+
+txdb <- loadDb(file = "~/Github/pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
+
+mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
+anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
+write_csv(anno_tablesA, file= "Annotation_tables_SNPs_Sig_mash_kinship_All.csv")
+
+mash_sigB <- mash_sigB %>% mutate(start = POS - 1000, end = POS + 1000)
+anno_tablesB <- pvdiv_table_topsnps(df = mash_sigB, type = "table", txdb = txdb)
+write_csv(anno_tablesB, file= "Annotation_tables_SNPs_2kb_Sig_mash_kinship_All_and_geno_subset.csv")
+
+
+mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
+anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
+write_csv(anno_tablesA, file= "Annotation_tables_SNPs_Sig_mash_kinship_All.csv")
+
+mash_sigPA <- mashPA %>% 
+  filter(log10BayesFactor >= 2) %>%
+  mutate(start = POS - 10000, end = POS + 10000)
+anno_tablesPA <- pvdiv_table_topsnps(df = mash_sigPA, type = "table", txdb = txdb)
+write_csv(anno_tablesPA, file= "Annotation_
+          tables_SNPs_20kb_Sig_mash_PLANT_ID_All.csv")
+
+
+mash_sigPGS <- mashPGS %>% 
+  filter(log10BF_PGS >= 2) %>%
+  mutate(start = POS - 10000, end = POS + 10000)
+anno_tablesPGS <- pvdiv_table_topsnps(df = mash_sigPGS, type = "table", txdb = txdb)
+write_csv(anno_tablesPGS, file= "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_geno_subset.csv")
+```
+
+
+
+```{r}
+mashA <- mashPA %>%
+  dplyr::rename(log10BF_All = "log10BayesFactor", NumSigCond_All = "Num_Sig_Conditions") 
+
+mashG <- mashPGS %>%
+  dplyr::rename(log10BF_GSub = "log10BayesFactor", NumSigCond_GSub = "Num_Sig_Conditions")
+
+mash <- mashA %>%
+  full_join(mashG)
+
+
+mash_sigB <- mash_sigB %>% mutate(start = POS - 1000, end = POS + 1000)
+anno_tablesB <- pvdiv_table_topsnps(df = mash_sigB, type = "table", txdb = txdb)
+write_csv(anno_tablesB, file= "Annotation_tables_SNPs_2kb_Sig_mash_PLANT_ID_All_and_geno_subset.csv")
+
+```
+
+
+```{r}
+mashKA <- read_csv("9-DiversityPanel/analysis/mash/Clumped_mash_output_df_kinship_All.csv")
+
+mashKGS <- read_csv("9-DiversityPanel/analysis/mash/Clumped_mash_output_df_kinship_geno_subset.csv")
+
+mashPA <- mashPA %>%
+  dplyr::rename(log10BF_PA = "log10BayesFactor", NumSigCond_PA = "Num_Sig_Conditions") 
+
+mashPGS <- mashPGS %>%
+  dplyr::rename(log10BF_PGS = "log10BayesFactor", NumSigCond_PGS = "Num_Sig_Conditions")
+
+
+mashKA <- mashKA %>%
+  dplyr::rename(log10BF_KA = "log10BayesFactor", NumSigCond_KA = "Num_Sig_Conditions") 
+
+mashKGS <- mashKGS %>%
+  dplyr::rename(log10BF_KGS = "log10BayesFactor", NumSigCond_KGS = "Num_Sig_Conditions")
+
+mash_4 <- mashPA %>%
+  full_join(mashPGS) %>%
+  full_join(mashKA) %>%
+  full_join(mashKGS)
+thresh = 1.3
+mash_4 %>%
+  filter(!is.na(log10BF_PA), !is.na(log10BF_PGS), !is.na(log10BF_KA), !is.na(log10BF_KGS)) %>%
+  group_by(log10BF_PA > thresh, log10BF_PGS > thresh, log10BF_KA > thresh, log10BF_KGS > thresh) %>%
+  tally()
+
+mash_sig_4 <- mash_4 %>%
+  filter(log10BF_PA > thresh & log10BF_PGS > thresh & log10BF_KA > thresh & log10BF_KGS > thresh) %>%
+  mutate(start = POS - 10000, end = POS + 10000)
+anno_tables4 <- pvdiv_table_topsnps(df = mash_sig_4, type = "table", txdb = txdb)
+write_csv(anno_tables4, file= "Annotation_tables_SNPs_20kb_Sig_mash_4_subsets.csv")
+```
+   `log10BF_PA > 2` `log10BF_PGS > 2` `log10BF_KA > 2` `log10BF_KGS > 2`       n
+   <lgl>            <lgl>             <lgl>            <lgl>               <int>
+ 1 FALSE            FALSE             FALSE            FALSE             1573030
+ 2 FALSE            FALSE             FALSE            TRUE                 1216
+ 3 FALSE            FALSE             TRUE             FALSE                 326
+ 4 FALSE            FALSE             TRUE             TRUE                  201  ###
+ 5 FALSE            TRUE              FALSE            FALSE                 188
+ 6 FALSE            TRUE              FALSE            TRUE                  182  ###
+ 7 FALSE            TRUE              TRUE             FALSE                   5
+ 8 FALSE            TRUE              TRUE             TRUE                   26
+ 9 TRUE             FALSE             FALSE            FALSE                 220
+10 TRUE             FALSE             FALSE            TRUE                   35
+11 TRUE             FALSE             TRUE             FALSE                 178
+12 TRUE             FALSE             TRUE             TRUE                  124
+13 TRUE             TRUE              FALSE            FALSE                  47
+14 TRUE             TRUE              FALSE            TRUE                   54
+15 TRUE             TRUE              TRUE             FALSE                  20
+16 TRUE             TRUE              TRUE             TRUE                  130  ###
