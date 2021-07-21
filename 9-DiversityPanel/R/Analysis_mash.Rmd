@@ -18,40 +18,29 @@ source("../../../Functions_ggplot-theme-adjustments_2018-01-03.R")
 #
 
 ```{r}
-mashA <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_All.csv")
+mashPA <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_All.csv")
 
-mashG <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_geno_subset.csv")
+mashPGS <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_geno_subset.csv")
 ```
 
-```{r}
-mashA %>%
-  filter(NumSigCond_All > 0)
 
-mashG %>%
-  filter(NumSigCond_GSub > 0)
-```
 30553 sig in A
 45422 sig in G
 20538 sig & in mashG & mashA
 
 ```{r}
-mashA <- mashA %>%
-  rename(log10BF_All = "log10BayesFactor", NumSigCond_All = "Num_Sig_Conditions") 
+mashPA <- mashPA %>%
+  rename(log10BF_PA = "log10BayesFactor", NumSigCond_PA = "Num_Sig_Conditions") 
 
-mashG <- mashG %>%
-  rename(log10BF_GSub = "log10BayesFactor", NumSigCond_GSub = "Num_Sig_Conditions")
+mashPGS <- mashPGS %>%
+  rename(log10BF_PGS = "log10BayesFactor", NumSigCond_PGS = "Num_Sig_Conditions")
 
-mash <- mashA %>%
-  full_join(mashG)
+mash <- mashPA %>%
+  full_join(mashPGS)
 
-
-mashG %>%
-  select(CHR, POS) %>%
-  inner_join(mashA) %>%
-  filter(Num_Sig_Conditions > 0)
 
 mash %>%
-  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  ggplot(aes(x = log10BF_PA, y = log10BF_PGS)) + 
   geom_hex() +
   scale_fill_gradient(trans = "log") +
   geom_smooth() +
@@ -65,22 +54,30 @@ mash %>%
 20538 sig & in mashG & mashA
 
 ```{r}
+mashPA %>%
+  filter(NumSigCond_All > 0)
+
+mashPGS %>%
+  filter(NumSigCond_GSub > 0)
+```
+
+```{r}
 mash %>%
-  group_by(log10BF_All > 1.3, log10BF_GSub > 1.3) %>%
+  group_by(log10BF_PA > 1.3, log10BF_PGS > 1.3) %>%
   tally()
 
 mash %>%
-  filter(log10BF_All > 2 | log10BF_GSub > 2) %>%
-  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  filter(log10BF_PA > 2 | log10BF_PGS > 2) %>%
+  ggplot(aes(x = log10BF_PA, y = log10BF_PGS)) + 
   geom_hex() +
   scale_fill_gradient(trans = "log") +
   geom_smooth() +
   geom_abline(slope = 1, linetype = 2)
 
 mash_sigA <- mashA %>%
-  filter(log10BF_All >= 2)
+  filter(log10BF_PA >= 2)
 mash_sigB <- mash %>%
-  filter(log10BF_All > 2 & log10BF_GSub > 2)
+  filter(log10BF_PA > 2 & log10BF_PGS > 2)
 ```
 2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
 
@@ -90,30 +87,39 @@ library(switchgrassGWAS)
 library(AnnotationDbi)
 library(VariantAnnotation)
 txdb <- loadDb(file = "../../../pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
+not_all_na <- function(x) any(!is.na(x))
+# anno_tables <- pvdiv_table_topsnps(df = )
+```
 
-anno_tables <- pvdiv_table_topsnps(df = )
+### Rice/thaliana functional validation
+
+os_annos: OsGene and AtGene columns of this df indicate if the gene has a homolog in rice or A. thaliana with a functional study. Key is the locusName column.
+```{r}
+annodir <- file.path("~", "Github", "pvdiv-phenology-gxe")
+ftanno <- read_csv(file.path(annodir, "data/Pvirgatum_v5.1.annotation_FTGeneHomologs.csv"))
+osgenekey <- read_delim(file.path(annodir, "data", "OsGene_keyword_table.txt"),
+                    delim = "\t")
+
+osgene_keyword_df <- osgenekey %>%
+  dplyr::select(-RAPdb, -MSU) %>%
+  group_by(Symbol, Keyword) %>%
+  dplyr::slice(1) %>%
+  pivot_wider(names_from = Keyword, values_from = Title)
+
+osgene_key <- osgene_keyword_df %>%
+  dplyr::select(Symbol, `senescence`, `grain`, `panicle`, `spikelet`, `grain length`, `grain number`, `grains per panicle`, `grain size`, `grain yield`, architecture, `inflorescence architecture`, `spikelet number`, branching, `panicle architecture`, `panicle size`, `spikelets per panicle`, `internode elongation`, `panicle length`, everything())
+
+os_annos <- ftanno %>%
+  filter(OsGene %in% osgene_key$Symbol | !is.na(AtGene)) %>%
+  mutate(Pos_Mb = round(start/10000)/100,
+         #Pos_Mb_e = floor(start/10000)/100,
+         POS_bin = round(Pos_Mb*100/2)) %>%# ,
+         #POS_bin_hi = round(Pos_Mb_e*100/2))
+  dplyr::select(OsGene, AtGene, locusName, everything()) %>%
+  dplyr::rename(`Gene ID` = locusName)
 ```
 
 ```{r}
-mash_sigA <- mashA %>%
-
-filter(log10BF_All >= 2)
-
-mash_sigB <- mash %>%
-
-filter(log10BF_All > 2 & log10BF_GSub > 2)
-
-```
-2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
-
-```{r}
-# devtools::install_github("alice-macqueen/switchgrassGWAS")
-
-library(switchgrassGWAS)
-library(AnnotationDbi)
-library(VariantAnnotation)
-
-txdb <- loadDb(file = "~/Github/pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
 
 mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
@@ -127,23 +133,73 @@ write_csv(anno_tablesB, file= "Annotation_tables_SNPs_2kb_Sig_mash_kinship_All_a
 mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
 write_csv(anno_tablesA, file= "Annotation_tables_SNPs_Sig_mash_kinship_All.csv")
+```
+
+
+```{r}
 
 mash_sigPA <- mashPA %>% 
-  filter(log10BayesFactor >= 2) %>%
+  filter(log10BF_PA >= 2) %>%
+  arrange(desc(log10BF_PA)) %>%
   mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesPA <- pvdiv_table_topsnps(df = mash_sigPA, type = "table", txdb = txdb)
-write_csv(anno_tablesPA, file= "Annotation_
-          tables_SNPs_20kb_Sig_mash_PLANT_ID_All.csv")
+anno_tablesPA <- anno_tablesPA %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PA))
 
+library(XLConnect)
+
+wb1 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_All.xlsx", 
+                    create = TRUE)
+  createSheet(wb1, name = "PLANT_ID_All")
+  writeWorksheet(wb1, anno_tablesPA, sheet = "PLANT_ID_All")
+
+saveWorkbook(wb1)
 
 mash_sigPGS <- mashPGS %>% 
   filter(log10BF_PGS >= 2) %>%
   mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesPGS <- pvdiv_table_topsnps(df = mash_sigPGS, type = "table", txdb = txdb)
-write_csv(anno_tablesPGS, file= "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_geno_subset.csv")
+anno_tablesPGS <- anno_tablesPGS %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PGS))
+
+wb2 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_geno_subset.xlsx", 
+                    create = TRUE)
+  createSheet(wb2, name = "PLANT_ID_geno_subset")
+  writeWorksheet(wb2, anno_tablesPGS, sheet = "PLANT_ID_geno_subset")
+
+saveWorkbook(wb2)
+
+mash_sigboth <- mashPGS %>%
+  full_join(mashPA) %>%
+  filter(log10BF_PGS > 1.3 & log10BF_PA > 1.3 ) %>%
+  mutate(start = POS - 10000, end = POS + 10000)
+anno_tables_bothP <- pvdiv_table_topsnps(df = mash_sigboth, type = "table", txdb = txdb)
+anno_tables_bothP <- anno_tables_bothP %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PGS))
+wb3 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_both_All_andgeno_subset.xlsx", 
+                    create = TRUE)
+  createSheet(wb3, name = "PLANT_ID_both")
+  writeWorksheet(wb3, anno_tables_bothP, sheet = "PLANT_ID_both")
+
+saveWorkbook(wb3)
 ```
 
-
+## Four mash models
 
 ```{r}
 mashA <- mashPA %>%
@@ -215,3 +271,22 @@ write_csv(anno_tables4, file= "Annotation_tables_SNPs_20kb_Sig_mash_4_subsets.cs
 14 TRUE             TRUE              FALSE            TRUE                   54
 15 TRUE             TRUE              TRUE             FALSE                  20
 16 TRUE             TRUE              TRUE             TRUE                  130  ###
+
+# Full mash models
+
+```{r}
+m_PA <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/mash/Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_All.rds")
+m_PGS <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/mash/Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds")
+```
+
+```{r}
+PAsig <- get_significant_results(m_PA)
+PGSsig <- get_significant_results(m_PGS)
+
+m_PA$loglik
+m_PGS$loglik
+
+length(which(PAsig %in% PGSsig))
+15826/48271
+```
+
