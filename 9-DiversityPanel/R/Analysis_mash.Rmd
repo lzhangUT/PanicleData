@@ -15,43 +15,35 @@ library(matrixStats)
 source("../../../Functions_ggplot-theme-adjustments_2018-01-03.R")
 ```
 
-#
+# load clumped mash models. Top SNP per LD block with r^2 < 0.2. Top SNP chosen using the log10BayesFactor from the mash model. 
 
 ```{r}
-mashA <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_All.csv")
+mashPA <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_All.csv")
 
-mashG <- read_csv("../analysis/mash/Clumped_mash_output_df_kinship_geno_subset.csv")
+mashPGS <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_geno_subset.csv")
 ```
 
-```{r}
-mashA %>%
-  filter(NumSigCond_All > 0)
 
-mashG %>%
-  filter(NumSigCond_GSub > 0)
-```
 30553 sig in A
 45422 sig in G
 20538 sig & in mashG & mashA
 
+# Compare significant overlaps
+
+
 ```{r}
-mashA <- mashA %>%
-  rename(log10BF_All = "log10BayesFactor", NumSigCond_All = "Num_Sig_Conditions") 
+mashPA <- mashPA %>%
+  rename(log10BF_PA = "log10BayesFactor", NumSigCond_PA = "Num_Sig_Conditions") 
 
-mashG <- mashG %>%
-  rename(log10BF_GSub = "log10BayesFactor", NumSigCond_GSub = "Num_Sig_Conditions")
+mashPGS <- mashPGS %>%
+  rename(log10BF_PGS = "log10BayesFactor", NumSigCond_PGS = "Num_Sig_Conditions")
 
-mash <- mashA %>%
-  full_join(mashG)
+mash <- mashPA %>%
+  full_join(mashPGS)
 
-
-mashG %>%
-  select(CHR, POS) %>%
-  inner_join(mashA) %>%
-  filter(Num_Sig_Conditions > 0)
 
 mash %>%
-  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  ggplot(aes(x = log10BF_PA, y = log10BF_PGS)) + 
   geom_hex() +
   scale_fill_gradient(trans = "log") +
   geom_smooth() +
@@ -65,103 +57,145 @@ mash %>%
 20538 sig & in mashG & mashA
 
 ```{r}
+mashPA %>%
+  filter(NumSigCond_PA > 0)
+mashPA %>%
+  filter(log10BF_PA > 1.3)  #7594
+
+mashPGS %>%
+  filter(NumSigCond_PGS > 0)
+mashPGS %>%
+  filter(log10BF_PGS > 1.3)  # 6149
+6149/2698038
+```
+
+```{r}
 mash %>%
-  group_by(log10BF_All > 1.3, log10BF_GSub > 1.3) %>%
+  group_by(log10BF_PA > 1.3, log10BF_PGS > 1.3) %>%
   tally()
 
 mash %>%
-  filter(log10BF_All > 2 | log10BF_GSub > 2) %>%
-  ggplot(aes(x = log10BF_All, y = log10BF_GSub)) + 
+  filter(log10BF_PA > 2 | log10BF_PGS > 2) %>%
+  ggplot(aes(x = log10BF_PA, y = log10BF_PGS)) + 
   geom_hex() +
   scale_fill_gradient(trans = "log") +
   geom_smooth() +
   geom_abline(slope = 1, linetype = 2)
 
 mash_sigA <- mashA %>%
-  filter(log10BF_All >= 2)
+  filter(log10BF_PA >= 2)
 mash_sigB <- mash %>%
-  filter(log10BF_All > 2 & log10BF_GSub > 2)
+  filter(log10BF_PA > 2 & log10BF_PGS > 2)
 ```
 2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
 
+# ---------------------
+# Make annotation files
 ```{r}
 # devtools::install_github("alice-macqueen/switchgrassGWAS")
 library(switchgrassGWAS)
 library(AnnotationDbi)
 library(VariantAnnotation)
 txdb <- loadDb(file = "../../../pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
-
-anno_tables <- pvdiv_table_topsnps(df = )
+not_all_na <- function(x) any(!is.na(x))
+# anno_tables <- pvdiv_table_topsnps(df = )
 ```
 
+### Rice/thaliana functional validation
+
+os_annos: OsGene and AtGene columns of this df indicate if the gene has a homolog in rice or A. thaliana with a functional study. Key is the locusName column.
 ```{r}
-mash_sigA <- mashA %>%
+annodir <- file.path("~", "Github", "pvdiv-phenology-gxe")
+ftanno <- read_csv(file.path(annodir, "data/Pvirgatum_v5.1.annotation_FTGeneHomologs.csv"))
+osgenekey <- read_delim(file.path(annodir, "data", "OsGene_keyword_table.txt"),
+                    delim = "\t")
 
-filter(log10BF_All >= 2)
+osgene_keyword_df <- osgenekey %>%
+  dplyr::select(-RAPdb, -MSU) %>%
+  group_by(Symbol, Keyword) %>%
+  dplyr::slice(1) %>%
+  pivot_wider(names_from = Keyword, values_from = Title)
 
-mash_sigB <- mash %>%
+osgene_key <- osgene_keyword_df %>%
+  dplyr::select(Symbol, `senescence`, `grain`, `panicle`, `spikelet`, `grain length`, `grain number`, `grains per panicle`, `grain size`, `grain yield`, architecture, `inflorescence architecture`, `spikelet number`, branching, `panicle architecture`, `panicle size`, `spikelets per panicle`, `internode elongation`, `panicle length`, everything())
 
-filter(log10BF_All > 2 & log10BF_GSub > 2)
-
+os_annos <- ftanno %>%
+  filter(OsGene %in% osgene_key$Symbol | !is.na(AtGene)) %>%
+  mutate(Pos_Mb = round(start/10000)/100,
+         #Pos_Mb_e = floor(start/10000)/100,
+         POS_bin = round(Pos_Mb*100/2)) %>%# ,
+         #POS_bin_hi = round(Pos_Mb_e*100/2))
+  dplyr::select(OsGene, AtGene, locusName, everything()) %>%
+  dplyr::rename(`Gene ID` = locusName)
 ```
-2043 sig in Gsub but not All at 2 level. Only 695 the opposite.
+
+## Make annotation files
+And save them as Excel files
 
 ```{r}
-# devtools::install_github("alice-macqueen/switchgrassGWAS")
-
-library(switchgrassGWAS)
-library(AnnotationDbi)
-library(VariantAnnotation)
-
-txdb <- loadDb(file = "~/Github/pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
-
-mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
-anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
-write_csv(anno_tablesA, file= "Annotation_tables_SNPs_Sig_mash_kinship_All.csv")
-
-mash_sigB <- mash_sigB %>% mutate(start = POS - 1000, end = POS + 1000)
-anno_tablesB <- pvdiv_table_topsnps(df = mash_sigB, type = "table", txdb = txdb)
-write_csv(anno_tablesB, file= "Annotation_tables_SNPs_2kb_Sig_mash_kinship_All_and_geno_subset.csv")
-
-
-mash_sigA <- mash_sigA %>% mutate(start = POS - 10000, end = POS + 10000)
-anno_tablesA <- pvdiv_table_topsnps(df = mash_sigA, type = "table", txdb = txdb)
-write_csv(anno_tablesA, file= "Annotation_tables_SNPs_Sig_mash_kinship_All.csv")
 
 mash_sigPA <- mashPA %>% 
-  filter(log10BayesFactor >= 2) %>%
+  filter(log10BF_PA >= 2) %>%
+  arrange(desc(log10BF_PA)) %>%
   mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesPA <- pvdiv_table_topsnps(df = mash_sigPA, type = "table", txdb = txdb)
-write_csv(anno_tablesPA, file= "Annotation_
-          tables_SNPs_20kb_Sig_mash_PLANT_ID_All.csv")
+anno_tablesPA <- anno_tablesPA %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PA))
 
+library(XLConnect)
+
+wb1 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_All.xlsx", 
+                    create = TRUE)
+  createSheet(wb1, name = "PLANT_ID_All")
+  writeWorksheet(wb1, anno_tablesPA, sheet = "PLANT_ID_All")
+
+saveWorkbook(wb1)
 
 mash_sigPGS <- mashPGS %>% 
   filter(log10BF_PGS >= 2) %>%
   mutate(start = POS - 10000, end = POS + 10000)
 anno_tablesPGS <- pvdiv_table_topsnps(df = mash_sigPGS, type = "table", txdb = txdb)
-write_csv(anno_tablesPGS, file= "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_geno_subset.csv")
+anno_tablesPGS <- anno_tablesPGS %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PGS))
+
+wb2 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_geno_subset.xlsx", 
+                    create = TRUE)
+  createSheet(wb2, name = "PLANT_ID_geno_subset")
+  writeWorksheet(wb2, anno_tablesPGS, sheet = "PLANT_ID_geno_subset")
+
+saveWorkbook(wb2)
+
+mash_sigboth <- mashPGS %>%
+  full_join(mashPA) %>%
+  filter(log10BF_PGS > 1.3 & log10BF_PA > 1.3 ) %>%
+  mutate(start = POS - 10000, end = POS + 10000)
+anno_tables_bothP <- pvdiv_table_topsnps(df = mash_sigboth, type = "table", txdb = txdb)
+anno_tables_bothP <- anno_tables_bothP %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BF_PGS))
+wb3 <- loadWorkbook(filename = "Annotation_tables_SNPs_20kb_Sig_mash_PLANT_ID_both_All_andgeno_subset.xlsx", 
+                    create = TRUE)
+  createSheet(wb3, name = "PLANT_ID_both")
+  writeWorksheet(wb3, anno_tables_bothP, sheet = "PLANT_ID_both")
+
+saveWorkbook(wb3)
 ```
 
-
-
-```{r}
-mashA <- mashPA %>%
-  dplyr::rename(log10BF_All = "log10BayesFactor", NumSigCond_All = "Num_Sig_Conditions") 
-
-mashG <- mashPGS %>%
-  dplyr::rename(log10BF_GSub = "log10BayesFactor", NumSigCond_GSub = "Num_Sig_Conditions")
-
-mash <- mashA %>%
-  full_join(mashG)
-
-
-mash_sigB <- mash_sigB %>% mutate(start = POS - 1000, end = POS + 1000)
-anno_tablesB <- pvdiv_table_topsnps(df = mash_sigB, type = "table", txdb = txdb)
-write_csv(anno_tablesB, file= "Annotation_tables_SNPs_2kb_Sig_mash_PLANT_ID_All_and_geno_subset.csv")
-
-```
-
+## Four mash models
 
 ```{r}
 mashKA <- read_csv("9-DiversityPanel/analysis/mash/Clumped_mash_output_df_kinship_All.csv")
@@ -215,3 +249,230 @@ write_csv(anno_tables4, file= "Annotation_tables_SNPs_20kb_Sig_mash_4_subsets.cs
 14 TRUE             TRUE              FALSE            TRUE                   54
 15 TRUE             TRUE              TRUE             FALSE                  20
 16 TRUE             TRUE              TRUE             TRUE                  130  ###
+
+# Full mash models
+
+```{r}
+m_PA <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/mash/Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_All.rds")
+m_PGS <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/mash/Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds")
+```
+
+```{r}
+PAsig <- get_significant_results(m_PA)
+PGSsig <- get_significant_results(m_PGS)
+
+m_PA$loglik
+m_PGS$loglik
+
+length(which(PAsig %in% PGSsig))
+15826/48271
+```
+
+# --------------------------
+# Mash QTL overlaps
+
+
+To compare mash results & QTL overlaps:
+
+    - because the mash results are from 18.7M SNPs using snpdiver, I want to clump the mash results (using `snp_clumping`) and only look at the most significant SNP by log10BayesFactor in each LD block.
+    - Use a hypergeometric test to look for enrichment of mash significant SNPs within QTL regions
+    - Use hypergeometric tests and permutation of "QTL" regions of the same size, 1000x, to determine if this enrichment is higher than expected for random genomic regions of the same size.
+    
+# load clumped mash models. Top SNP per LD block with r^2 < 0.2. Top SNP chosen using the log10BayesFactor from the mash model. 
+
+```{r}
+mashPA <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_All.csv")
+
+mashPGS <- read_csv("../analysis/mash/Clumped_mash_output_df_PLANT_ID_geno_subset.csv")
+```
+ 
+## QTL enrichment function
+```{r get QTL enrichment function}
+
+get_QTL_enrichment <- function(m_clumped, qtl_df, quantile = 0.95, thr.BF = NA){
+
+  if(is.na(thr.BF)) {
+  thr.BF <- quantile(m_clumped$log10BayesFactor, quantile)
+  }
+  m_df <- m_clumped %>%
+  filter(log10BayesFactor > thr.BF) %>%
+  dplyr::select(CHR:POS, log10BayesFactor, everything())
+  
+  for(i in 1:nrow(qtl_df)){  # from 1 to 16
+  ## In block & > 2
+  QTLandBF <- m_df %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>% 
+    tally()
+  ## BF>2
+  inBF <- m_df %>%
+    tally()
+  ## BF not > 2 (all minus BF > 2, all is below)
+  allwrtBF <- m_clumped %>%
+    tally()
+  ## All in block
+  inQTL <- m_clumped %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>%
+    tally()
+  notinBF <- (allwrtBF$n[1]-inBF$n[1])
+  pval <- phyper(QTLandBF$n[1], inBF$n[1], allwrtBF$n[1]-inBF$n[1], 
+                 inQTL$n[1], lower.tail = FALSE)
+  
+  if(i == 1){
+  outputdf <- tibble(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i], inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+  } else {
+    outputdf <- outputdf %>%
+      add_row(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i],inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+    }
+  }
+  return(outputdf)
+}
+
+```
+
+## load datasets for QTL enrichment function 
+```{r}
+qtldf <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/Fourway_panicle_QTL_10gardens.csv")
+
+qtl_df <- qtldf %>% 
+  separate(`Left flanking marker`, into = c("CHR", "PosL"), sep = "_", 
+           convert = TRUE) %>%
+  separate(`Right flanking_marker`, into = c("ChrR", "PosR"), sep = "_", 
+           convert = TRUE) %>%
+  mutate(POS_lo = PosL*1000000,
+         POS_hi = PosR*1000000) %>%
+  arrange(MARKER)
+
+# m_clumped <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/phe2mash/Clumped_mash_output_df_pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_All.csv")
+```
+ 
+### Test function on loaded datasets
+```{r}
+
+QTL_enr_PA <- get_QTL_enrichment(mashPA, qtl_df, quantile = 0.99) %>%
+  filter(pvalue < 0.05)
+QTL_enr_PGS <- get_QTL_enrichment(mashPGS, qtl_df, quantile = 0.99) %>%
+  filter(pvalue < 0.05)
+get_QTL_enrichment(mashPA, qtl_df, quantile = 0.95) %>%
+  filter(pvalue < 0.05)
+get_QTL_enrichment(mashPGS, qtl_df, quantile = 0.95) %>%
+  filter(pvalue < 0.05)
+
+get_QTL_enrichment(mashPA, qtl_df, thr.BF = 2) %>%
+  filter(pvalue < 0.05)
+get_QTL_enrichment(mashPGS, qtl_df, thr.BF = 2) %>%
+  filter(pvalue < 0.05)
+
+mashPA %>% 
+  filter(Num_Sig_Conditions > 0) %>%
+  arrange(log10BayesFactor)
+mashPA %>% 
+  filter(log10BayesFactor > 1.30)
+-log10(0.05)
+
+8318/2700593
+mashPA %>% 
+  filter(log10BayesFactor > 1.30) %>%
+  group_by(Num_Sig_Conditions) %>%
+  tally()
+8110/8318
+```
+For the top 1% of SNPs, 7 QTL intervals have sig enrichment of mash SNPs in the All subset. 10 QTL intervals have sig. enrichment of mash SNPs in the geno subset. It's 9 for All and 8 for geno_subset for the top 5% of SNPs. 9 & 7 for log10BF of 1.3. 4 & 4 for log10BF of 2.
+
+I did use the 1% mash tail in the phenology paper, if consistency (the hobgoblin of lesser minds) means anything here. 
+
+## Permutation of enrichment test
+```{r}
+sig_randomPA <- c()
+sig_randomPGS <- c()
+chr_size_mash <- mashPA %>%
+  ungroup() %>%
+  group_by(CHR) %>%
+  dplyr::summarise(Pos_lo = min(POS),
+                   Pos_hi = max(POS))
+qtl_size <- qtl_df %>%
+  select(CHR, POS_lo, POS_hi) %>%
+  unique() %>%   # don't doublecount completely overlapping QTL
+  #(does doublecount partially overlapping QTL, however.)
+  group_by(CHR, POS_lo) %>%
+  dplyr::mutate(Size = POS_hi - POS_lo) %>%
+  dplyr::select(CHR, POS_lo, Size)
+
+for(j in 1:1000){
+  rchr <- chr_size_mash$CHR[sample(1:18, nrow(qtl_size), replace = TRUE)]
+  rposlo <- c()
+  for(i in 1:length(rchr)){
+    rposlo[i] <- sample(chr_size_mash$Pos_lo[which(chr_size_mash$CHR == rchr[i])]:chr_size_mash$Pos_hi[which(chr_size_mash$CHR == rchr[i])], 1)
+  }
+
+  random_qtl <- tibble(CHR = rchr, POS_lo = rposlo, Size = qtl_size$Size) %>%
+    mutate(POS_hi = POS_lo + Size) %>%
+    arrange(CHR, POS_lo)
+
+  random_PA <- get_QTL_enrichment(mashPA, qtl_df = random_qtl, 
+                                   quantile = 0.99)
+  random_PGS <- get_QTL_enrichment(mashPGS, qtl_df = random_qtl, 
+                                   quantile = 0.99)
+  
+  sig_randomPA[j] <- nrow(filter(random_PA, pvalue < 0.05))
+  sig_randomPGS[j] <- nrow(filter(random_PGS, pvalue < 0.05))
+}
+```
+
+### Plot histogram of enrichments of random QTL intervals
+```{r}
+outputdir1 <- file.path("~", "Github", "PanicleData", "9-DiversityPanel", 
+                        "analysis", "mash")
+
+suffix <- "clumped_PLANT_ID_All"
+saveRDS(sig_randomPA, file = file.path(outputdir1, paste0("1000_Random_QTL_df_significant_enrichments_of_mash_BF_1per_tail_", suffix, ".rds")))
+get_QTL_enrichment(mashPA, qtl_df, quantile = 0.99) %>%
+write_csv(file = file.path(outputdir1, paste0("mash_QTL_enrichments_",
+                                              "BF_1per_tail",
+                                              suffix, ".csv")))
+tibble(`mash significant enrichments` = sig_randomPA) %>%
+  arrange(desc(`mash significant enrichments`)) %>%
+  ggplot(aes(x = `mash significant enrichments`)) +
+  switchgrassGWAS::theme_oeco +
+  geom_histogram(binwidth = 1) + 
+  xlim(c(1, 18)) + ylab("") +
+  geom_vline(xintercept = nrow(QTL_enr_PA), linetype = 2, color = "red")
+save_plot(filename = file.path(outputdir1, paste0("Histogram_of_random_QTL_mash_enrichments_BF_1per_tail_1000runs", suffix, ".png")),  plot = last_plot(), base_height = 1.8, base_asp = 1.6)
+
+
+
+
+suffix <- "clumped_PLANT_ID_geno_subset"
+saveRDS(sig_randomPGS, file = file.path(outputdir1, paste0("1000_Random_QTL_df_significant_enrichments_of_mash_BF_1per_tail", suffix, ".rds")))
+get_QTL_enrichment(mashPGS, qtl_df, quantile = 0.99) %>%
+write_csv(file = file.path(outputdir1, paste0("mash_QTL_enrichments_",
+                                              "BF_1per_tail",
+                                              suffix, ".csv")))
+
+tibble(`mash significant enrichments` = sig_randomPGS) %>%
+  arrange(desc(`mash significant enrichments`)) %>%
+  ggplot(aes(x = `mash significant enrichments`)) +
+  switchgrassGWAS::theme_oeco +
+  geom_histogram(binwidth = 1) + 
+  xlim(c(1, 18)) + ylab("") +
+  geom_vline(xintercept = nrow(QTL_enr_PGS), linetype = 2, color = "red")
+save_plot(filename = file.path(outputdir1, paste0("Histogram_of_random_QTL_mash_enrichments_BF_1per_tail_1000runs", suffix, ".png")),  plot = last_plot(), base_height = 1.8, base_asp = 1.6)
+
+length(which(sig_randomPA >= nrow(QTL_enr_PA)))  
+length(which(sig_randomPGS >= nrow(QTL_enr_PGS)))
+
+33/1000
+2/1000
+```
+
+
+```{r}
+mashPGS %>%
+  group_by(Num_Sig_Conditions) %>%
+  tally()
+mashPGS %>%
+  filter(Num_Sig_Conditions > 0)
+14179/18617
+```
+
