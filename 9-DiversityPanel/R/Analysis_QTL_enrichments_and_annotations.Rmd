@@ -1,0 +1,296 @@
+---
+title: "Analysis QTL overlaps and annotations"
+author: "Alice MacQueen"
+date: 2021-06-30
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# -------------------
+# Mash / QTL overlaps
+
+Ran mash on a genotypic subset of 381g for four panicle traits at three gardens. 
+
+To compare mash results & QTL overlaps:
+
+    - because the mash results are from 18.7M SNPs using snpdiver, I want to clump the mash results (using `snp_clumping`) and only look at the most significant SNP by log10BayesFactor in each LD block.
+    - Use a hypergeometric test to look for enrichment of mash significant SNPs within QTL regions
+    - Use hypergeometric tests and permutation of "QTL" regions of the same size, 1000x, to determine if this enrichment is higher than expected for random genomic regions of the same size.
+  
+```{r m2 is on popgen}
+m2 <- readRDS(file = file.path(outputdir, paste0("Full_mash_model_",
+                                                 "5000", "_SNPs_U_ed_and_",
+                                                 "100000", "_SNPs_mash_fit_",
+                                                 suffix, ".rds")))
+```
+
+## QTL enrichment function
+```{r get QTL enrichment function}
+
+get_QTL_enrichment <- function(m_clumped, qtl_df, quantile = 0.95, thr.BF = NA){
+
+  if(is.na(thr.BF)) {
+  thr.BF <- quantile(m_clumped$log10BayesFactor, quantile)
+  }
+  m_df <- m_clumped %>%
+  filter(log10BayesFactor > thr.BF) %>%
+  dplyr::select(CHR:POS, log10BayesFactor, everything())
+  
+  for(i in 1:nrow(qtl_df)){  # from 1 to 16
+  ## In block & > 2
+  QTLandBF <- m_df %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>% 
+    tally()
+  ## BF>2
+  inBF <- m_df %>%
+    tally()
+  ## BF not > 2 (all minus BF > 2, all is below)
+  allwrtBF <- m_clumped %>%
+    tally()
+  ## All in block
+  inQTL <- m_clumped %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>%
+    tally()
+  notinBF <- (allwrtBF$n[1]-inBF$n[1])
+  pval <- phyper(QTLandBF$n[1], inBF$n[1], allwrtBF$n[1]-inBF$n[1], 
+                 inQTL$n[1], lower.tail = FALSE)
+  
+  if(i == 1){
+  outputdf <- tibble(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i], inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+  } else {
+    outputdf <- outputdf %>%
+      add_row(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i],inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+    }
+  }
+  return(outputdf)
+}
+
+```
+
+## load datasets for QTL enrichment function 
+```{r}
+qtldf <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/Fourway_panicle_QTL_10gardens.csv")
+
+qtl_df <- qtldf %>% 
+  separate(`Left flanking marker`, into = c("CHR", "PosL"), sep = "_", 
+           convert = TRUE) %>%
+  separate(`Right flanking_marker`, into = c("ChrR", "PosR"), sep = "_", 
+           convert = TRUE) %>%
+  mutate(POS_lo = PosL*1000000,
+         POS_hi = PosR*1000000) %>%
+  arrange(MARKER)
+
+m_clumped <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/phe2mash/Clumped_mash_output_df_pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_All.csv")
+```
+ 
+### Test function on loaded datasets
+```{r}
+get_QTL_enrichment(m_clumped, qtl_df, thr.BF = 1.3) %>%
+  write_csv(file = file.path(outputdir1, paste0("mash_QTL_enrichments_",
+                                                suffix, ".csv")))
+get_QTL_enrichment(m_clumped, qtl_df, quantile = 0.99)
+
+m_clumped %>% 
+  filter(Num_Sig_Conditions > 0) %>%
+  arrange(log10BayesFactor)
+m_clumped %>% 
+  filter(log10BayesFactor > 1.30)
+-log10(0.05)
+
+8318/2700593
+m_clumped %>% 
+  filter(log10BayesFactor > 1.30) %>%
+  group_by(Num_Sig_Conditions) %>%
+  tally()
+8110/8318
+```
+
+
+## Permutation of enrichment test
+```{r}
+sig_random <- c()
+chr_size_mash <- m_clumped %>%
+  ungroup() %>%
+  group_by(CHR) %>%
+  dplyr::summarise(Pos_lo = min(POS),
+                   Pos_hi = max(POS))
+qtl_size <- qtl_df %>%
+  select(CHR, POS_lo, POS_hi) %>%
+  unique() %>%   # don't doublecount completely overlapping QTL
+  #(does doublecount partially overlapping QTL, however.)
+  group_by(CHR, POS_lo) %>%
+  dplyr::mutate(Size = POS_hi - POS_lo) %>%
+  dplyr::select(CHR, POS_lo, Size)
+
+for(j in 1:1000){
+  rchr <- chr_size_mash$CHR[sample(1:18, nrow(qtl_size), replace = TRUE)]
+  rposlo <- c()
+  for(i in 1:length(rchr)){
+    rposlo[i] <- sample(chr_size_mash$Pos_lo[which(chr_size_mash$CHR == rchr[i])]:chr_size_mash$Pos_hi[which(chr_size_mash$CHR == rchr[i])], 1)
+  }
+
+  random_qtl <- tibble(CHR = rchr, POS_lo = rposlo, Size = qtl_size$Size) %>%
+    mutate(POS_hi = POS_lo + Size) %>%
+    arrange(CHR, POS_lo)
+
+  random_df <- get_QTL_enrichment(m_clumped, qtl_df = random_qtl, 
+                                   thr.BF = 1.3)
+  
+  sig_random[j] <- nrow(filter(random_df, pvalue < 0.05))
+}
+```
+
+### Plot histogram of enrichments of random QTL intervals
+```{r}
+saveRDS(sig_random, file = file.path(outputdir1, paste0("1000_Random_QTL_df_significant_enrichments_of_mash_BF_gt1.3", suffix, ".rds")))
+get_QTL_enrichment(m_clumped, qtl_df, thr.BF = 1.3) %>%
+  filter(pvalue < 0.05)
+
+tibble(`mash significant enrichments` = sig_random) %>%
+  arrange(desc(`mash significant enrichments`)) %>%
+  ggplot(aes(x = `mash significant enrichments`)) +
+  switchgrassGWAS::theme_oeco +
+  geom_histogram(binwidth = 1) + 
+  xlim(c(1, 18)) + ylab("") +
+  geom_vline(xintercept = 6, linetype = 2, color = "red")
+save_plot(filename = file.path(outputdir1, paste0("Histogram_of_random_QTL_mash_enrichments_BF_gt1.3_1000runs", suffix, ".png")),  plot = last_plot(), base_height = 1.8, base_asp = 1.6)
+
+46/1000
+9/1000
+```
+
+## Find explained variance per SNP
+
+```{r}
+ind_row <- which(plants %in% phe_gwas$PLANT_ID)
+
+m_clump_maf <- snp_MAF(pavir_snp$genotypes, ind.col = mash_clumps, 
+                       ind.row = ind_row)
+
+Means <- get_pm(m2)
+Means_clump <- Means[mash_clumps,]
+colnames(Means_clump) <- paste0(colnames(Means_clump), "_Effect_Mean")
+
+mash_df_clumped <- mash_df_clumped %>%
+  add_column(maf = m_clump_maf)
+mash_df_effects <- tibble(cbind(mash_df_clumped, Means_clump))
+
+mash_df_expvar <- mash_df_effects %>%
+  pivot_longer(cols = matches("_Mean"), names_to = "PHE", values_to = "Effect") %>%
+  mutate(Explained_variance = 2*maf*(1-maf)*Effect^2,
+         PHE = str_replace(PHE, "_Effect_Mean", "_Explained_Variance")) %>%
+  select(-Effect) %>%
+  pivot_wider(names_from = PHE, values_from = Explained_variance, values_fn = mean)
+
+write_csv(mash_df_effects, file = file.path(outputdir, paste0("Clumped_SNPs_Mean_Effects", suffix, ".csv")))
+write_csv(mash_df_expvar, file = file.path(outputdir, paste0("Clumped_SNPs_Variance_Explained", suffix, ".csv")))
+
+```
+
+```{r}
+mash_df_expvar %>%
+  select(-CHRN) %>%
+  filter(Num_Sig_Conditions > 0) %>%
+  pivot_longer(cols = matches("Explained_Variance"), 
+               names_to = "PHE", values_to = "Exp_Var") %>%
+  arrange(desc(Exp_Var)) %>%
+  #filter(Exp_Var > 0.005) %>%
+  write_csv(file.path(outputdir1, paste0("Significant_SNPs_with_largest_Variance_Explained", suffix, ".csv")))
+
+qtl_df
+
+colSums(filter(mash_df_expvar, Num_Sig_Conditions > 0)[,8:19]) # ~12x 
+```
+
+
+
+# -------------------
+# Mash annotations
+
+```{r}
+BiocManager::install("AnnotationDbi")
+BiocManager::install("GenomicFeatures")
+BiocManager::install("VariantAnnotation")
+```
+
+### Rice/thaliana functional validation
+
+os_annos: OsGene and AtGene columns of this df indicate if the gene has a homolog in rice or A. thaliana with a functional study. Key is the locusName column.
+```{r}
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+annodir <- file.path("~", "Github", "pvdiv-phenology-gxe")
+ftanno <- read_csv(file.path(annodir, "data/Pvirgatum_v5.1.annotation_FTGeneHomologs.csv"))
+osgenekey <- read_delim(file.path(annodir, "data", "OsGene_keyword_table.txt"),
+                    delim = "\t")
+
+osgene_keyword_df <- osgenekey %>%
+  dplyr::select(-RAPdb, -MSU) %>%
+  group_by(Symbol, Keyword) %>%
+  dplyr::slice(1) %>%
+  pivot_wider(names_from = Keyword, values_from = Title)
+
+osgene_key <- osgene_keyword_df %>%
+  dplyr::select(Symbol, `senescence`, `grain`, `panicle`, `spikelet`, `grain length`, `grain number`, `grains per panicle`, `grain size`, `grain yield`, architecture, `inflorescence architecture`, `spikelet number`, branching, `panicle architecture`, `panicle size`, `spikelets per panicle`, `internode elongation`, `panicle length`, everything())
+
+os_annos <- ftanno %>%
+  filter(OsGene %in% osgene_key$Symbol | !is.na(AtGene)) %>%
+  mutate(Pos_Mb = round(start/10000)/100,
+         #Pos_Mb_e = floor(start/10000)/100,
+         POS_bin = round(Pos_Mb*100/2)) %>%# ,
+         #POS_bin_hi = round(Pos_Mb_e*100/2))
+  dplyr::select(OsGene, AtGene, locusName, everything()) %>%
+  dplyr::rename(`Gene ID` = locusName)
+```
+
+
+```{r}
+library(switchgrassGWAS)
+library(AnnotationDbi)
+not_all_na <- function(x) any(!is.na(x))
+txdb <- loadDb("~/Github/pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
+
+anno_c <- m_clumped %>%
+  filter(Num_Sig_Conditions > 0) %>%
+  mutate(start = POS - 10000,
+         end = POS + 10000)
+
+annos_mash_c_df <- pvdiv_table_topsnps(df = anno_c, type = "table", 
+                                       rangevector = 0, txdb = txdb) 
+annos_mash_c_df_functval <- annos_mash_c_df %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BayesFactor))
+write_csv(annos_mash_c_df_functval, 
+          file = file.path(outputdir1, paste0("Mash_annotations_with_functional_validation", suffix, ".csv")))
+```
+
+```{r}
+
+for(i in 1:nrow(qtl_df)) {  # from 1 to 16
+## Sig in mash, Has functional annotation & in QTL interval
+QTL_and_anno <- annos_mash_c_df_functval %>%
+  filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                           qtl_df$POS_hi[i]))
+
+  if(i == 1){
+  QTL_and_anno_df <- QTL_and_anno
+  } else {
+  QTL_and_anno_df <- QTL_and_anno_df %>%
+    full_join(QTL_and_anno)
+  }
+}
+
+QTL_and_anno_df %>%
+  dplyr::select(where(not_all_na)) %>%
+  write_csv(file = file.path(outputdir1, paste0("Mash_annotations_in_QTL_regions_with_functional_validation", suffix, ".csv")))
+```
+

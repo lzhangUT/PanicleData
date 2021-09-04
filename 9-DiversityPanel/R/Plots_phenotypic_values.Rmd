@@ -1,0 +1,289 @@
+---
+title: "Plots of phenotypes"
+author: "Alice MacQueen"
+date: 2021-06-30
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+#library(asreml)
+library(snpdiver)
+library(cowplot)
+library(matrixStats)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis")
+```
+
+## 2A. PLANT_ID subset of 408
+
+```{r}
+prefix <- "pvdiv_panicles_2019_geno_subset_"
+pan_phe <- readRDS(file.path(datadir, "panicle_phenotypes_genotype_subset.rds"))
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_All_"
+pan_phe <- readRDS(file.path(datadir, "panicle_phenotypes.rds"))
+```
+
+## Phenotypes for GWAS
+```{r}
+kinshipdir <- file.path(workingdir, "analysis", "heritability")
+prefix1 <- "pvdiv_panicles_2019_BLUPs_kinship_geno_subset_"
+prefix2 <- "pvdiv_panicles_2019_BLUPs_kinship_"
+
+plantiddir <- file.path(workingdir, "analysis", "PLANT_ID_BLUPs")
+prefix3 <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+prefix4 <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+
+phe_gwas1 <- read_csv(file = file.path(kinshipdir, 
+                                       paste0(prefix1, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_gwas2 <- read_csv(file = file.path(kinshipdir, 
+                                       paste0(prefix2, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_gwas3 <- read_csv(file = file.path(plantiddir, 
+                                       paste0(prefix3, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_gwas4 <- read_csv(file = file.path(plantiddir, 
+                                       paste0(prefix4, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  rename(sample.ID = .data$PLANT_ID)
+
+phe_gwas_list <- list(PLANT_ID_All = phe_gwas4,
+                      PLANT_ID_geno_subset = phe_gwas3,
+                      kinship_geno_subset = phe_gwas1,
+                      kinship_All = phe_gwas2)
+
+```
+
+
+
+# ------------------------------
+# Plots using PLANT_ID BLUPS 
+
+
+
+
+## Trait histograms
+
+On both raw trait values and on PLANT_ID BLUPs (which should be normal, by definition).
+
+```{r}
+pan_phe$SUBPOP <- factor(pan_phe$SUBPOP, levels = c("Gulf", "Midwest", "Atlantic", "4X", "8X"))
+pan_phe %>%
+  filter(PLANT_ID != "AP13") %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_grid(vars(SUBPOP), vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of raw phenotypic measurements")
+
+save_plot(filename = file.path(outputdir, paste0(prefix, "_trait_histograms.png")), 
+          plot = last_plot(), base_height = 6)
+
+phe_gwas_list[[1]] %>%
+  pivot_longer(cols = 2:10, names_to = "PHE", values_to = "MEAS") %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET), by = c("sample.ID" = "PLANT_ID")) %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_grid(vars(SUBPOP), vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of phenotypic BLUPs for GWAS")
+save_plot(filename = file.path(outputdir, paste0(names(phe_gwas_list)[1], "_trait_PLANT_ID_BLUP_histograms.png")), 
+          plot = last_plot(), base_height = 6)
+```
+
+# got to here # - - - - - 
+## Phenotypic correlations
+
+```{r phenotypic correlation plotting function}
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+i = 4
+# Make a correlation plot for each subpop.
+for (i in seq_along(subpop_v)) {
+  cov_df <- pan_phe %>% filter(SUBPOP %in% subpop_v[[i]])
+  cor_phe <- cor(cov_df[,-(1:3)], use = "pairwise")
+
+# Replace 1's on the diagonal with the coefficient of variation within each common garden.
+cov_sd <- matrixStats::colSds(as.matrix(cov_df[,4:ncol(cov_df)]), na.rm = TRUE)
+cov_mean <- matrixStats::colMeans2(as.matrix(cov_df[,4:ncol(cov_df)]), 
+                                   na.rm = TRUE)
+diag(cor_phe) <- cov_sd/cov_mean 
+
+# If the correlation matrix is symmetric, remove the upper left half for plotting.
+if(isSymmetric(cor_phe)){
+      for(m in 1:nrow(cor_phe)){
+        for(j in 1:ncol(cor_phe)){
+          if(m < j){
+            cor_phe[m, j] <- NA
+          }
+        }
+      }
+}
+
+# Put matrix in long format for ggplot.
+    U1 <- as_tibble(cor_phe, rownames = "rowU", .name_repair = "unique") %>%
+            pivot_longer(cols = -.data$rowU, names_to = "colU",
+                         values_to = "covar") %>%
+            filter(!is.na(.data$covar))
+    U1$colU <- factor(U1$colU, levels = colnames(cor_phe))
+    U1$rowU <- factor(U1$rowU, levels = colnames(cor_phe))
+
+    ggplot1 <- U1 %>%
+    ggplot(aes(x = .data$rowU, y = .data$colU)) +
+    switchgrassGWAS::theme_oeco +
+    geom_tile(aes(fill = .data$covar), na.rm = TRUE) +
+    scale_fill_gradientn(colors = c("#440154FF", "#3B528BFF", "#2C728EFF",
+                                  "white", "#27AD81FF", "#5DC863FF",
+                                  "#FDE725FF"),
+                         limits = c(-1, 1)) +
+    #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
+    # Add text labels for each tile with the covariance fraction
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          #axis.text = element_blank(), # optionally remove this text
+          axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.spacing.x = unit(-0, 'cm')) +
+    xlab("") + ylab("") + labs(title = "CVs (diagonal) and phenotypic correlations 
+                               for 2019 Panicle Traits at Three Gardens", subtitle = names(subpop_v)[i])
+
+save_plot(filename = file.path(outputdir, paste0(prefix, names(subpop_v)[i],
+                                                 "_subpop_",
+                                                 "phenotypic_correlations_",
+                                                 "and_within_condition",
+                                                 "_CVs.png")),
+          plot = ggplot1, base_height = length(colnames(cor_phe))*.3+1, 
+          base_asp = 1.1)
+}
+```
+
+```{r}
+pan_groups <- phe_gwas %>%
+  unite(GROUP, c(SUBPOP, ECOTYPE_NNET), sep = "_")
+group_v <- list(Atlantic_Upland = "Atlantic_Upland", Atlantic_Coastal = "Atlantic_Coastal", Gulf_Lowland = "Gulf_Lowland", Gulf_Coastal = "Gulf_Coastal", Midwest_Upland = "Midwest_Upland")
+
+for (i in seq_along(group_v)) {
+  cov_df <- pan_groups %>% filter(GROUP %in% group_v[[i]])
+  cor_phe <- cor(cov_df[,-(1:2)], use = "pairwise")
+
+# Replace 1's on the diagonal with the coefficient of variation within each common garden.
+cov_sd <- matrixStats::colSds(as.matrix(cov_df[,3:ncol(cov_df)]), na.rm = TRUE)
+cov_mean <- matrixStats::colMeans2(as.matrix(cov_df[,3:ncol(cov_df)]), 
+                                   na.rm = TRUE)
+diag(cor_phe) <- cov_sd/cov_mean 
+
+# If the correlation matrix is symmetric, remove the upper left half for plotting.
+if(isSymmetric(cor_phe)){
+      for(m in 1:nrow(cor_phe)){
+        for(j in 1:ncol(cor_phe)){
+          if(m < j){
+            cor_phe[m, j] <- NA
+          }
+        }
+      }
+}
+
+# Put matrix in long format for ggplot.
+    U1 <- as_tibble(cor_phe, rownames = "rowU", .name_repair = "unique") %>%
+            pivot_longer(cols = -.data$rowU, names_to = "colU",
+                         values_to = "covar") %>%
+            filter(!is.na(.data$covar))
+    U1$colU <- factor(U1$colU, levels = colnames(cor_phe))
+    U1$rowU <- factor(U1$rowU, levels = colnames(cor_phe))
+
+    ggplot1 <- U1 %>%
+    ggplot(aes(x = .data$rowU, y = .data$colU)) +
+    switchgrassGWAS::theme_oeco +
+    geom_tile(aes(fill = .data$covar), na.rm = TRUE) +
+    scale_fill_gradientn(colors = c("#440154FF", "#3B528BFF", "#2C728EFF",
+                                  "white", "#27AD81FF", "#5DC863FF",
+                                  "#FDE725FF"),
+                         limits = c(-1, 1)) +
+    #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
+    # Add text labels for each tile with the covariance fraction
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          #axis.text = element_blank(), # optionally remove this text
+          axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.spacing.x = unit(-0, 'cm')) +
+    xlab("") + ylab("") + labs(title = "CVs (diagonal) and phenotypic correlations 
+                               for 2019 Panicle Traits", subtitle = names(group_v)[i])
+
+save_plot(filename = file.path(outputdir, paste0(prefix, names(group_v)[i],
+                                                 "_subpop_",
+                                                 "phenotypic_correlations_",
+                                                 "and_within_condition",
+                                                 "_CVs.png")),
+          plot = ggplot1, base_height = length(colnames(cor_phe))*.3+1, 
+          base_asp = 1.1)
+}
+```
+
+## Reaction norms
+
+Do on the subset of 408 present at all three gardens, clearly.
+
+```{r}
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019")
+# phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+```
+
+
+### RN on PLANT_ID subset of 408
+```{r PLANT_ID subset present at all three gardens}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(file.path(outputdir,
+                               paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything()) %>%
+  pivot_longer(cols = 4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(SITE = case_when(grepl("TX2", PHE_SITE) ~ "TX2",
+                          grepl("MO", PHE_SITE) ~ "MO",
+                          grepl("MI", PHE_SITE) ~ "MI"),
+         PHE = case_when(grepl("PAN_LEN", PHE_SITE) ~ "PAN_LEN",
+                         grepl("PRIM_BN", PHE_SITE) ~ "PRIM_BN",
+                         grepl("SEC_BN", PHE_SITE) ~ "SEC_BN",
+                         grepl("SEC_LN", PHE_SITE) ~ "SEC_LN")) %>%
+  select(-PHE_SITE) %>%
+  pivot_wider(names_from = "PHE", values_from = "MEAS")
+
+phe_gwas$SUBPOP <- factor(phe_gwas$SUBPOP, levels = c("Gulf", "Midwest", "Atlantic", "4X", "8X"))
+phe_gwas$SITE <- factor(phe_gwas$SITE, levels = c("TX2", "MO", "MI"))
+```
+
+```{r}
+phe_gwas %>%
+  #filter(ECOTYPE_NNET != "Unknown") %>%
+  ggplot(aes(x = SITE, y = PAN_LEN)) +
+  geom_point(aes(color = PLANT_ID)) +
+  geom_line(aes(color = PLANT_ID, group = PLANT_ID), alpha = 0.6) +
+  theme(legend.position = "none") +
+  facet_grid(vars(ECOTYPE_NNET), vars(SUBPOP), scales = "free_y") +
+  #geom_smooth(aes(group = ECOTYPE_NNET, color = ECOTYPE_NNET)) +
+  scale_color_viridis_d(end = 0.9)
+save_plot(filename = file.path(outputdir, paste0("Reaction_Norms_for_", "PAN_LEN",
+                                                 "_by_Subpop_and_Ecotype.png")), 
+          plot = last_plot(), base_height = 6)
+```

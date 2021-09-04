@@ -1,0 +1,182 @@
+---
+title: "Analysis G & GxE"
+author: "Alice MacQueen"
+date: "6/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## -----------------------------------
+# GxE 
+Model is trait ~ (kinship*garden)
+
+
+## 1A. Setup on server
+
+```{r server setup}
+library(tidyverse)
+library(asreml)
+library(cowplot)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+
+workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
+datadir <- file.path(workingdir, "data")
+
+k_full <- read_rds(file.path("~", "Github", "pvdiv-genome", "tensite_twoyear",
+                             "Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds"))
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI", 
+               three_sites = c("TX2", "MO", "MI"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN")
+
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+
+h2_table <- tibble()
+gxe_table <- tibble()
+```
+
+## 2A. PLANT_ID subset of 408
+
+```{r}
+prefix <- "pvdiv_panicles_2019_geno_subset_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes_genotype_subset.rds"))
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes.rds"))
+```
+
+```{r}
+outputdir <- file.path(workingdir, "analysis", "variance-partitioning")
+if(!dir.exists(outputdir)){
+  dir.create(outputdir)
+}
+if(!dir.exists(file.path(outputdir, "ASReml_plots"))){
+  dir.create(file.path(outputdir, "ASReml_plots"))
+}
+if(!dir.exists(file.path(outputdir, "ASReml_BLUPs"))){
+  dir.create(file.path(outputdir, "ASReml_BLUPs"))
+}
+ 
+
+for(i in 4){ # may need to adjust below for h2_table #  seq_along(site_v)
+  #dir.create(file.path(outputdir, names(site_v)[i]), showWarnings = FALSE)
+  for(j in seq_along(subpop_v)){
+    for(k in seq_along(phe_v)){
+      phe_single <- phe %>%
+      filter(manu_site %in% site_v[[i]] & SUBPOP %in% subpop_v[[j]] & 
+               PHE %in% phe_v[k]) %>%
+      rename(phenotype = MEAS) %>%
+      mutate(PLANT_ID = as_factor(PLANT_ID),
+             SITE = as_factor(SITE)) %>%
+      as.data.frame()
+
+if(length(site_v[[i]]) > 1){  # need to add site as a random factor if 
+  # there is more than one site included in the dataset.
+  tryCatch({
+   asr_out <- asreml(phenotype ~ 1,
+                     random = ~idv(SITE)*vm(PLANT_ID, k_full),
+                     residual = ~idv(units),
+                     data = phe_single, 
+                     workspace = "3gb")
+
+  Env_est <- vpredict(asr_out, E ~ V1/(V1+V2+V3+V4))
+  GxE_est <- vpredict(asr_out, GxE_h2 ~ V3/(V1+V2+V3+V4))
+  err_est <- vpredict(asr_out, err ~ V4/(V1+V2+V3+V4))
+  h2_est <- vpredict(asr_out, G_h2 ~ V2/(V1+V2+V3+V4)) %>% as_tibble() %>%
+    mutate(site = names(site_v)[i],
+           subpop = names(subpop_v)[j],
+           phe = phe_v[k],
+           bic = summary(asr_out)$bic[1],
+           loglik = summary(asr_out)$loglik,
+           Env_Estimate = Env_est$Estimate[1],
+           Env_SE = Env_est$SE[1],
+           GxE_Estimate = GxE_est$Estimate[1],
+           GxE_SE = GxE_est$SE[1],
+           error_Estimate = err_est$Estimate[1],
+           error_SE = err_est$SE[1])
+  
+  blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+  as_tibble(rownames = "Effect")
+  write_csv(blup, file.path(outputdir, "ASReml_BLUPs", 
+                            paste0(prefix, "GxE_blups_", names(site_v)[i],
+                                   "_", names(subpop_v)[j], "_", phe_v[k],
+                                   ".csv")))
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+} 
+if(i == 1 & j == 1 & k == 1){
+  h2_table <- h2_est
+} else if(i == 4 & j == 1 & k == 1){
+  gxe_table <- h2_est
+} else if(length(site_v[[i]]) > 1){
+  gxe_table <- add_row(gxe_table, h2_est)
+} else {
+  h2_table <- add_row(h2_table, h2_est)
+}
+tryCatch({
+    save_plot(filename = file.path(outputdir, "ASReml_plots",
+                                   paste0(prefix, "ASReml_performance_",
+                                          names(site_v)[i], "_",
+                                          names(subpop_v)[j],
+                                          "_", phe_v[k], ".png")), 
+          plot = plot(asr_out))
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+
+    }
+  }
+}
+#write_csv(h2_table, file.path(outputdir, paste0(prefix, "GxE_blups_h2_df.csv")))
+write_csv(gxe_table, file.path(outputdir, paste0(prefix, "gxe_and_h2_df_", 
+                                                 "GxE_blups.csv")))
+
+```
+
+# -------------
+## Plotting
+```{r}
+gxe_table <- read_csv(file.path(outputdir, paste0(prefix, "gxe_and_h2_df_", 
+                                                   "GxE_blups.csv")))
+
+gxe_barplot2 <- gxe_table %>%
+  select(site:loglik, ends_with("SE")) %>%
+  pivot_longer(cols = ends_with("SE"), names_to = "Type", values_to = "SE") %>%
+  mutate(type_name = case_when(Type == "SE" ~ "G",
+                               Type == "GxE_SE" ~ "GxE",
+                               Type == "error_SE" ~ "error",
+                               Type == "Env_SE" ~ "E")) %>%
+  select(-Type)
+gxe_barplot <- gxe_table %>%
+  select(site:loglik, ends_with("Estimate")) %>%
+  pivot_longer(cols = ends_with("Estimate"), names_to = "Type", values_to = "Estimate") %>%
+  mutate(type_name = case_when(Type == "Estimate" ~ "G",
+                               Type == "GxE_Estimate" ~ "GxE",
+                               Type == "error_Estimate" ~ "error",
+                               Type == "Env_Estimate" ~ "E"))
+gxe_barplot <- gxe_barplot %>%
+  left_join(gxe_barplot2)
+gxe_barplot$type_name <- factor(gxe_barplot$type_name, levels = rev(c("G", "GxE", "E", "error")))
+gxe_barplot <- gxe_barplot %>%
+  arrange(site, subpop, phe, desc(type_name)) %>%
+  group_by(site, subpop, phe) %>%
+  mutate(Estimate_cum = cumsum(Estimate))
+```
+
+```{r}
+bar_gxe <- gxe_barplot %>%
+  ggplot(aes(x = phe, y = Estimate)) +
+  geom_bar(stat = "identity", aes(fill = type_name)) + 
+  geom_errorbar(aes(ymin = Estimate_cum - SE, ymax = Estimate_cum+ SE), width = 0.3) + facet_grid(site ~ subpop) +
+  scale_fill_viridis_d(direction = -1) +
+  theme(panel.spacing.x = unit(0.1, 'cm'), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), legend.position = "right") + ylim(c(0,1.01))
+  
+save_plot(file.path(outputdir, paste0(prefix, "Var_Components.png")),
+          plot = bar_gxe, base_height = 4)
+save_plot(file.path(outputdir, paste0(prefix, "Var_Components.svg")),
+          plot = bar_gxe, base_height = 4)
+```

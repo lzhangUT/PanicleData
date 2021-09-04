@@ -1,0 +1,232 @@
+---
+title: "Analysis_three_phenotypes"
+author: "Alice MacQueen"
+date: "6/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# heritability
+
+## 1A. Setup on server
+
+```{r server setup}
+library(tidyverse)
+library(asreml)
+library(cowplot)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+
+workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
+datadir <- file.path(workingdir, "data")
+k_full <- read_rds(file.path("~", "Github", "pvdiv-genome", "tensite_twoyear",
+                             "Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds"))
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI", 
+               three_sites = c("TX2", "MO", "MI"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN")
+
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+
+h2_table <- tibble()
+```
+
+## 2A. PLANT_ID subset of 408
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_kinship_geno_subset_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes_genotype_subset.rds"))
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_BLUPs_kinship_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes.rds"))
+```
+
+## 3 ASReml loop
+
+```{r asreml loop}
+i = 1 ; j = 1; k = 1
+
+outputdir <- file.path(workingdir, "analysis", "heritability")
+if(!dir.exists(outputdir)){
+  dir.create(outputdir)
+}
+if(!dir.exists(file.path(outputdir, "ASReml_plots"))){
+  dir.create(file.path(outputdir, "ASReml_plots"))
+}
+if(!dir.exists(file.path(outputdir, "ASReml_BLUPs"))){
+  dir.create(file.path(outputdir, "ASReml_BLUPs"))
+}
+
+
+for(i in seq_along(site_v)){ # may need to adjust h2_table line below 
+  for(j in seq_along(subpop_v)){
+    for(k in seq_along(phe_v)){
+      phe_single <- phe %>%
+        filter(manu_site %in% site_v[[i]] & SUBPOP %in% subpop_v[[j]] & PHE %in% phe_v[[k]]) %>%
+        rename(phenotype = MEAS) %>%
+        mutate(PLANT_ID = as_factor(PLANT_ID),
+               SITE = as_factor(SITE)) %>%
+        as.data.frame()
+
+if(length(site_v[[i]]) > 1){  # need to add site as a random factor if 
+  # there is more than one site included in the dataset.
+  tryCatch({
+   asr_out <- asreml(phenotype ~ 1,
+                     random = ~vm(PLANT_ID, k_full) +
+                       ~idv(SITE),
+                     residual = ~idv(units),
+                     data = phe_single, 
+                     workspace = "3gb")
+
+  h2_est <- vpredict(asr_out, h2 ~ V2/(V1+V2+V3)) %>% as_tibble() %>%
+    mutate(site = names(site_v)[i],
+           subpop = names(subpop_v)[j],
+           phe = phe_v[[k]],
+           bic = summary(asr_out)$bic[1],
+           loglik = summary(asr_out)$loglik)
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+} else {
+  tryCatch({
+  asr_out <- asreml(phenotype ~ 1,
+                     random = ~vm(PLANT_ID, k_full),
+                     residual = ~idv(units), # may adjust this for vi data
+                     data = phe_single, 
+                     workspace = "3gb")
+  
+  h2_est <- vpredict(asr_out, h2 ~ V1/(V1+V2)) %>% as_tibble() %>%
+    mutate(site = names(site_v)[i],
+           subpop = names(subpop_v)[j],
+           phe = phe_v[[k]],
+           bic = summary(asr_out)$bic[1],
+           loglik = summary(asr_out)$loglik
+           )
+  blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+    as_tibble(rownames = "Effect")
+  write_csv(blup, file.path(outputdir, "ASReml_BLUPs", 
+                            paste0(prefix, "blups_", names(site_v)[i], "_",
+                                   names(subpop_v)[j], "_", phe_v[k], ".csv")))
+}, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+  tryCatch({
+    save_plot(filename = file.path(outputdir, "ASReml_plots", paste0(prefix,
+                                                   "ASReml_performance_",
+                                                   names(site_v)[i], "_",
+                                                    phe_v[k], ".png")), 
+          plot = plot(asr_out))
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+if(i == 1 & j == 1 & k == 1){
+  h2_table <- h2_est
+} else {
+  h2_table <- add_row(h2_table, h2_est)
+}
+    }
+  }
+}
+write_csv(h2_table, file.path(outputdir, paste0(prefix, "h2_df_no_GxE.csv")))
+
+```
+
+## Read in BLUP csv files
+
+```{r}
+phe_gwas <- tibble()
+j=4   # Just for three_subpops, get BLUPs for GWAS
+
+    for(i in 1:3){  # seq_along(site_v)
+      for(k in seq_along(phe_v)){
+        phe_raw <- read_csv(file.path(outputdir, "ASReml_BLUPs",
+                                      paste0(prefix, "blups_", names(site_v)[i],
+                                             "_", names(subpop_v)[j], "_",
+                                             phe_v[k], ".csv")))
+        names(phe_raw)[2] <- paste0(phe_v[k], "_", names(site_v)[i])
+        phe_proc <- phe_raw %>%
+          separate(Effect, into = c(NA, "PLANT_ID"), sep = 21) %>%
+          select(PLANT_ID, 2)
+        if(i == 1 & k == 1){
+          phe_gwas <- phe_proc
+        } else {
+          phe_gwas <- phe_gwas %>%
+            left_join(phe_proc, by = "PLANT_ID")
+        }
+      }
+    }
+  write_csv(phe_gwas, file = file.path(outputdir,
+                                       paste0(prefix, "BLUP_phenotypes",
+                                              ".csv")))
+```
+
+
+# --------
+### Plot heritabilities from table
+
+```{r}
+h2_table <- read_csv(file.path(outputdir, paste0(prefix, "h2_df_no_GxE.csv")))
+
+h2_table
+
+pan_mean <- phe %>%
+  group_by(SUBPOP, manu_site, PHE) %>%
+  summarise(Mean_PHE = mean(MEAS),
+            SD_PHE = sd(MEAS, na.rm = TRUE),
+            n_PHE = n(),
+            TwoSE_PHE = 2*sd(MEAS, na.rm = TRUE)/sqrt(n())) %>%
+  filter(!is.na(SUBPOP)) %>%
+  rename(site = manu_site, subpop = SUBPOP, phe = PHE)
+
+ggh2 <- h2_table %>% 
+  left_join(pan_mean) %>%
+  mutate(subpop_name = case_when(subpop == "three_subpops" ~ "All",
+                                 TRUE ~ subpop),
+         site_name = case_when(site == "three_sites" ~ "All",
+                                 TRUE ~ site))
+ggh2$subpop_name <- factor(ggh2$subpop_name, levels = c("Gulf", "Midwest", "Atlantic", "All"))
+ggh2$site_name <- factor(ggh2$site_name, levels = c("TX2", "MO", "MI", "All"))
+```
+
+```{r}
+ggh2 %>% group_by(site) %>% tally()
+ggh2 %>%
+  ggplot(aes(x = site_name, y = Estimate)) +
+  geom_bar(aes(fill = site == "three_sites"), stat = "identity") +
+  geom_errorbar(aes(ymin = Estimate - SE, 
+                    ymax = Estimate + SE), width = 0.3) +
+  geom_linerange(aes(ymin = Estimate, ymax = Estimate + SE)) +
+  geom_hline(yintercept = 0.2, linetype = 2) +
+  facet_grid(vars(subpop_name), vars(phe)) +
+  theme(panel.spacing.x = unit(0.1, 'cm'), 
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none") + 
+  ylim(c(0, 1)) + labs(x = "Site", y = bquote('h'^2)) +
+  scale_fill_viridis_d(end = 0.8, direction = 1)
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_by_Site_and_Subpop.png")), plot = last_plot(), base_height = 5)
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_by_Site_and_Subpop.svg")), plot = last_plot(), base_height = 5)
+
+ggh2 %>%
+  filter(SE < 0.4) %>%
+  ggplot(aes(x = Mean_PHE, y = Estimate)) +
+  geom_point(aes(color = subpop, shape = site)) +
+  geom_errorbar(aes(ymin = Estimate - SE*2, 
+                    ymax = Estimate + SE*2,
+                    color = subpop)) +
+  geom_errorbarh(aes(xmin = Mean_PHE - TwoSE_PHE,
+                     xmax = Mean_PHE + TwoSE_PHE,
+                     color = subpop)) +
+  facet_wrap(vars(phe), scales = "free") +
+  geom_smooth(method = lm) + 
+  geom_hline(yintercept = c(0, 0.5, 1), linetype = 2) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83", "grey")) + 
+  scale_shape_manual(values = c(15, 16, 3, 17)) +
+  labs(x = "Mean Subpop Panicle Phenotype", y = bquote('h'^2)) +
+  theme(legend.position = "right")
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_against_Mean_Panicle_Phenotype.png")), 
+          plot = last_plot(), base_height = 4)
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_against_Mean_Panicle_Phenotype.svg")), 
+          plot = last_plot(), base_height = 4)
+```
