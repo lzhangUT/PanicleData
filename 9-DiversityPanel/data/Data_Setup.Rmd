@@ -1,0 +1,222 @@
+---
+title: "Data Setup"
+author: "Alice MacQueen"
+date: 2021-06-30
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+#library(asreml)
+library(snpdiver)
+library(cowplot)
+library(matrixStats)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+```
+
+# 
+
+This is a genetic analysis of three panicle traits collected in the diversity panel in 2019 at three common gardens: KBS (MI), Columbia (MO), and Pickle (TX2).
+
+The three traits are PAN_LEN, PRIM_BN, and SEC_BN: 
+
+  - PAN_LEN: length from first primary branch to tip of panicle
+  - PRIM_BN: # primary branches
+  - SEC_BN: # secondary branches off the first primary branch.
+
+These traits were also measured in the fourway cross, though at more gardens.
+
+# Prepare phenotypes
+
+```{r}
+prefix = "pvdiv_panicles_2019_"
+workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
+datadir <- file.path("~", "Github", "pvdiv-phenotypes", "data")
+outputdir <- file.path(workingdir, "data")
+phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+saveRDS(metadata, file = file.path(outputdir, "metadata.rds"))
+```
+
+```{r}
+panicles <- phenotypes %>%
+  filter(grepl("PAN_LEN", PHE) | grepl("PRIM_BN", PHE) | grepl("SEC_BN", PHE)) %>%
+  pivot_wider(id_cols = c(PLANT_ID, SUBPOP), names_from = c("manu_site", "PHE"), 
+              values_from = MEAS, values_fn = mean) %>%
+  filter(SUBPOP !="8X")
+
+pan_subset <- panicles %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  mutate(Any_NA = rowSums(!is.na(panicles))) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, Any_NA, everything()) %>%
+  filter(Any_NA > 21) %>%
+  arrange(Any_NA)
+
+pan_subset_phe <- phenotypes %>%
+  filter(PLANT_ID %in% pan_subset$PLANT_ID) %>%
+  filter(grepl("PAN_LEN", PHE) | grepl("PRIM_BN", PHE) | grepl("SEC_BN", PHE)) %>%
+  filter(SITE %in% c("KBSM", "CLMB", "PKLE")) %>%
+  mutate(MEAS = case_when(MEAS == 105601 ~ 10,
+                   TRUE ~ MEAS)) %>%
+  separate(PHE, into = c("PHE", NA, "REP"), sep = c(-2,-1)) %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET), by = "PLANT_ID") %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+pan_phe <- phenotypes %>%
+  #filter(PLANT_ID %in% pan_subset$PLANT_ID) %>%
+  filter(grepl("PAN_LEN", PHE) | grepl("PRIM_BN", PHE) | grepl("SEC_BN", PHE)) %>%
+  filter(SITE %in% c("KBSM", "CLMB", "PKLE")) %>%
+  mutate(MEAS = case_when(MEAS == 105601 ~ 10,
+                   TRUE ~ MEAS)) %>%
+  separate(PHE, into = c("PHE", NA, "REP"), sep = c(-2,-1)) %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET), by = "PLANT_ID") %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+saveRDS(pan_subset_phe, file = file.path(outputdir, "panicle_phenotypes_genotype_subset.rds"))
+saveRDS(pan_phe, file = file.path(outputdir, "panicle_phenotypes.rds"))
+```
+
+Full set vs subset of genotypes, what subpopulations and ecotypes are lost?
+```{r}
+panicles %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  mutate(Any_NA = rowSums(!is.na(panicles))) %>%
+  select(PLANT_ID, SUBPOP, Any_NA, everything()) %>%
+  filter(Any_NA > 21) %>%
+  group_by(SUBPOP) %>% #, ECOTYPE_NNET) %>%
+  tally()
+
+panicles %>%
+  group_by(SUBPOP) %>%
+  tally()
+
+panicles %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  mutate(Any_NA = rowSums(!is.na(panicles))) %>%
+  select(PLANT_ID, SUBPOP, Any_NA, everything()) %>%
+  filter(Any_NA > 21) %>%
+  group_by(SUBPOP, ECOTYPE_NNET) %>%
+  tally()
+
+panicles %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  group_by(SUBPOP, ECOTYPE_NNET) %>%
+  tally()
+```
+
+
+4X: 43 to 27  (62.7%)
+Atlantic: 267 to 164  (61.4%)
+Gulf: 228 to 129   (56.6%)
+Midwest: 133 to 89  (66.9%)
+
+60 vs 108 Atlantic Coastal (55.55%)
+101 vs 148 Atlantic Upland (68.2%)
+39 vs 85 Gulf Coastal (45.9%)
+89 vs 133 Gulf Lowland (66.9%)
+87 vs 125 Midwest Upland (69.6%)
+
+# ---------
+
+# BLUPs using PLANT_ID
+
+There are three technical replicates measured for each PLANT_ID and each phenotype. Get the BLUP for each of these by just PLANT_ID.
+```{r}
+workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
+datadir <- file.path(workingdir, "data")
+analysisdir <- file.path(workingdir, "analysis")
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI")
+h2_table <- tibble()
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN")
+```
+
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes_genotype_subset.rds"))
+```
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+phe <- readRDS(file.path(datadir, "panicle_phenotypes.rds"))
+```
+
+
+```{r}
+i = 1 ; k = 1
+outputdir <- file.path(workingdir, "analysis", "PLANT_ID_BLUPs")
+if(!dir.exists(outputdir)){
+  dir.create(outputdir)
+}
+if(!dir.exists(file.path(outputdir, "ASReml_plots"))){
+  dir.create(file.path(outputdir, "ASReml_plots"))
+}
+if(!dir.exists(file.path(outputdir, "ASReml_BLUPs"))){
+  dir.create(file.path(outputdir, "ASReml_BLUPs"))
+}
+
+for(i in seq_along(site_v)){ # may need to adjust h2_table line below 
+  for(k in seq_along(phe_v)){
+      phe_single <- phe %>%
+        filter(manu_site %in% site_v[[i]] & PHE %in% phe_v[[k]]) %>%
+        rename(phenotype = MEAS) %>%
+        mutate(PLANT_ID = as_factor(PLANT_ID),
+               SITE = as_factor(SITE),
+               PLOT_GL = as_factor(PLOT_GL)) %>%
+        as.data.frame()
+
+  tryCatch({
+  asr_out <- asreml(phenotype ~ 1,
+                     random = ~idv(PLANT_ID),
+                     residual = ~idv(units),
+                     data = phe_single, 
+                     workspace = "3gb")
+  
+  blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+    as_tibble(rownames = "Effect")
+  write_csv(blup, file.path(outputdir, "ASReml_BLUPs", paste0(prefix,
+                                              names(site_v)[i], "_",
+                                              phe_v[k], ".csv")))
+}, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+
+tryCatch({
+    save_plot(filename = file.path(outputdir, "ASReml_plots", paste0(prefix,
+                                                   "ASReml_performance_",
+                                                   names(site_v)[i], "_",
+                                                    phe_v[k], ".png")), 
+          plot = plot(asr_out))
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+
+    }
+  }
+```
+
+## Read in BLUP csv files
+
+```{r}
+phe_gwas <- tibble()
+
+    for(i in seq_along(site_v)){
+      for(k in seq_along(phe_v)){
+        phe_raw <- read_csv(file.path(outputdir, "ASReml_BLUPs",
+                                      paste0(prefix,
+                                              names(site_v)[i], "_",
+                                              phe_v[k], ".csv")))
+        names(phe_raw)[2] <- paste0(phe_v[k], "_", names(site_v)[i])
+        phe_proc <- phe_raw %>%
+          separate(Effect, into = c(NA, "PLANT_ID"), sep = 9) %>%
+          select(PLANT_ID, 2)
+        if(i == 1 & k == 1){
+          phe_gwas <- phe_proc
+        } else {
+          phe_gwas <- phe_gwas %>%
+            left_join(phe_proc, by = "PLANT_ID")
+        }
+      }
+    }
+  write_csv(phe_gwas, file = file.path(outputdir,
+                                       paste0(prefix, "BLUP_phenotypes",
+                                              ".csv")))
+```
+
