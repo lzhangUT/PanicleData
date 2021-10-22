@@ -1,0 +1,277 @@
+---
+title: "Figure 6"
+author: "Alice MacQueen"
+date: "10/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+library(bigsnpr)
+library(here)
+```
+
+#
+
+```{r}
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+
+datadir <- here("data")
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI", 
+               three_sites = c("TX2", "MO", "MI"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN")
+
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+
+h2_table <- tibble()
+prefix <- "pvdiv_panicles_2019_BLUPs_kinship_geno_subset_"
+
+outputdir <- here("analysis", "heritability")
+```
+
+# Violin plots of diversity phenotypes at three sites, maybe with ecotype means shown
+
+```{r}
+phe <- readRDS(here("data/panicle_phenotypes_genotype_subset.rds"))
+phe <- phe %>%
+  mutate(phe_name = case_when(PHE == "PAN_LEN" ~ "PL",
+                              PHE == "PRIM_BN" ~ "PBN",
+                              PHE == "SEC_BN" ~ "SBN"))
+phe$ECOTYPE_NNET <- factor(phe$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
+phe$SITE <- factor(phe$SITE, levels = c("PKLE", "CLMB", "KBSM"))
+phe$phe_name <- factor(phe$phe_name, levels = c("PL", "PBN", "SBN"))
+                  
+                  
+```
+
+```{r}
+ecotype_means <- phe %>%
+  filter(ECOTYPE_NNET != "Unknown") %>%
+  group_by(phe_name, SITE, ECOTYPE_NNET) %>%
+  summarise(Ecotype_mean = mean(MEAS),
+            Ecotype_se = sd(MEAS)/sqrt(n()/3), # sample size for SE should be number of unique genotypes, three panicle phenotype replicates per genotype, on average
+            Ecotype_n = n()/3)
+subpop_means <- phe %>%
+  filter(SUBPOP != "4X") %>%
+  group_by(phe_name, SITE, SUBPOP) %>%
+  summarise(Subpop_mean = mean(MEAS),
+            Subpop_se = sd(MEAS)/sqrt(n()/3), # sample size for SE should be number of unique genotypes, three panicle phenotype replicates per genotype, on average
+            Subpop_n = n()/3)
+
+
+panel_a <- phe %>%
+  ggplot(aes(x = SITE)) + 
+  facet_grid(rows = vars(phe_name), scales = "free_y") +
+  geom_violin(aes(y = MEAS)) +
+  geom_point(data = ecotype_means, mapping = aes(x = SITE, y = Ecotype_mean,
+                                                 color = ECOTYPE_NNET)) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000")) +
+  geom_errorbar(data = ecotype_means, aes(x = SITE, ymin = Ecotype_mean - Ecotype_se*2, 
+                    ymax = Ecotype_mean + Ecotype_se*2,
+                    color = ECOTYPE_NNET), width = 0.25) +
+  theme(legend.position = "right")
+
+panel_supp <- phe %>%
+  ggplot(aes(x = SITE)) + 
+  facet_grid(rows = vars(phe_name), scales = "free_y") +
+  geom_violin(aes(y = MEAS)) +
+  geom_point(data = subpop_means, mapping = aes(x = SITE, y = Subpop_mean,
+                                                 color = SUBPOP)) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83")) +
+  geom_errorbar(data = subpop_means, aes(x = SITE, ymin = Subpop_mean - Subpop_se*2, 
+                    ymax = Subpop_mean + Subpop_se*2,
+                    color = SUBPOP), width = 0.25) +
+  theme(legend.position = "right")
+
+```
+
+# heritability barplots
+
+```{r}
+h2_table <- read_csv(file.path(outputdir, paste0(prefix, "h2_df_no_GxE.csv")))
+
+h2_table <- h2_table %>%
+  mutate(SITE = case_when(site == "TX2" ~ "PKLE",
+                          site == "MO" ~ "CLMB",
+                          site == "MI" ~ "KBSM",
+                          site == "three_sites" ~ "All"),
+         phe_name = case_when(phe == "PAN_LEN" ~ "PL",
+                              phe == "PRIM_BN" ~ "PBN",
+                              phe == "SEC_BN" ~ "SBN")) 
+h2_table$phe_name <- factor(h2_table$phe_name, levels = c("PL", "PBN", "SBN"))
+h2_table$SITE <- factor(h2_table$SITE, levels = c("PKLE", "CLMB", "KBSM", "All"))
+
+h2_specific <- filter(h2_table, SITE != "All" & subpop != "three_subpops")
+h2_specific1 <- filter(h2_table, SITE != "All")
+ 
+panel_b <- h2_table %>%
+  filter(SITE != "All" & subpop == "three_subpops") %>%
+  ggplot(aes(x = SITE, y = Estimate)) +
+  geom_bar(aes(), stat = "identity", fill = "grey", color = "black") + 
+  facet_grid(rows = vars(phe_name), scales = "free_y") +
+  geom_errorbar(aes(ymin = Estimate - SE*2, 
+                    ymax = Estimate + SE*2), width = 0.25)
+
+panel_supp2 <- h2_specific1 %>%
+  ggplot(aes(x = subpop, y = Estimate)) +
+  facet_grid(cols = vars(SITE), rows = vars(phe_name)) +
+  geom_point(aes(color = subpop)) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83", "grey")) +
+  geom_errorbar(data = h2_specific1, aes(ymin = Estimate - SE*2, 
+                    ymax = Estimate + SE*2, color = subpop), width = 0.25) +
+  theme(legend.position = "right") +
+  geom_hline(data = filter(h2_specific1, subpop == "three_subpops"), 
+             mapping = aes(yintercept = Estimate + SE*2), color = "grey", 
+             linetype = 2)  +
+  geom_hline(data = filter(h2_specific1, subpop == "three_subpops"), 
+             mapping = aes(yintercept = Estimate - SE*2), color = "grey", 
+             linetype = 2)
+
+```
+
+```{r}
+27*.05
+.05/27
+```
+
+# Phenotypic correlations
+
+```{r}
+site_v2 <- list(PKLE = "PKLE", CLMB = "CLMB", KBSM = "KBSM")
+site_plots <- list()
+
+for (i in seq_along(site_v2)) {
+  cov_df <- phe %>% filter(SITE %in% site_v2[[i]]) %>% 
+    select(-PHE) %>%
+    pivot_wider(names_from = "phe_name", values_from = "MEAS")
+  cor_phe <- cor(cov_df[,(10:12)], use = "pairwise")
+
+# Replace 1's on the diagonal with the coefficient of variation within each common garden.
+#cov_sd <- matrixStats::colSds(as.matrix(cov_df[,10:ncol(cov_df)]), na.rm = TRUE)
+# cov_mean <- matrixStats::colMeans2(as.matrix(cov_df[,10:ncol(cov_df)]), 
+#                                   na.rm = TRUE)
+# diag(cor_phe) <- cov_sd/cov_mean 
+
+# If the correlation matrix is symmetric, remove the upper left half for plotting.
+if(isSymmetric(cor_phe)){
+      for(m in 1:nrow(cor_phe)){
+        for(j in 1:ncol(cor_phe)){
+          if(m < j){
+            cor_phe[m, j] <- NA
+          }
+        }
+      }
+}
+
+# Put matrix in long format for ggplot.
+    U1 <- as_tibble(cor_phe, rownames = "rowU", .name_repair = "unique") %>%
+            pivot_longer(cols = -.data$rowU, names_to = "colU",
+                         values_to = "covar") %>%
+            filter(!is.na(.data$covar))
+    U1$colU <- factor(U1$colU, levels = colnames(cor_phe))
+    U1$rowU <- factor(U1$rowU, levels = colnames(cor_phe))
+
+    site_plots[[i]] <- U1 %>%
+    ggplot(aes(x = .data$rowU, y = .data$colU)) +
+    switchgrassGWAS::theme_oeco +
+    geom_tile(aes(fill = .data$covar), na.rm = TRUE) +
+    scale_fill_gradientn(colors = c("#440154FF", "#3B528BFF", "#2C728EFF",
+                                  "white", "#27AD81FF", "#5DC863FF",
+                                  "#FDE725FF"),
+                         limits = c(-1, 1)) +
+    #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
+    # Add text labels for each tile with the covariance fraction
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          #axis.text = element_blank(), # optionally remove this text
+          axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.spacing.x = unit(-0, 'cm')) +
+    xlab("") + ylab("") + labs(title = names(site_v2)[i], 
+                               fill = "Phenotypic\ncorrelation")
+}
+
+```
+
+```{r}
+suffix_svd <- paste0("big_three_garden_SNPs", "All")
+pavir_svd <- readRDS(file = file.path(here("analysis", "mash"),
+                                      paste0(suffix_svd,
+                                                        "_svd.rds")))
+bigsnp_inputs <- read_delim(here("analysis", 
+                                   "bigsnp_inputs.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") 
+metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
+k = 7
+pavir_kins <- readRDS("~/Github/pvdiv-genome/tensite_twoyear/Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds")
+pavir_1 <- tibble(PLANT_ID = colnames(pavir_kins)) %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET, SUBPOP, LATITUDE, LONGITUDE, ATLANTIC_Q, MIDWEST_DA))
+pavir_1$ECOTYPE_NNET <- factor(pavir_1$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
+
+panel_supp_a <- plot(pavir_svd)
+str(pavir_svd)
+plot(pavir_svd, type = "loadings", loadings = 1:4)
+
+plot(pavir_svd, type = "scores", scores = 1:2) +
+  aes(color = pavir_1$ECOTYPE_NNET) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey"))
+panel_supp_b <- plot(pavir_svd, type = "scores", scores = 1:2) +
+  aes(color = pavir_1$SUBPOP, shape = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83")) +
+  labs(color = "Subpopulation", shape = "Subpopulation")
+plot(pavir_svd, type = "scores", scores = 2:3) +
+  aes(color = pavir_1$ECOTYPE_NNET) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey"))
+plot(pavir_svd, type = "scores", scores = 2:3) +
+  aes(color = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
+panel_supp_c <- plot(pavir_svd, type = "scores", scores = 3:4) +
+  aes(color = pavir_1$ECOTYPE_NNET, shape = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey")) +
+  labs(color = "Ecotype", shape = "Subpopulation")
+plot(pavir_svd, type = "scores", scores = 3:4) +
+  aes(color = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
+plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$LONGITUDE) +
+  scale_color_viridis_c()
+plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$LATITUDE) +
+  scale_color_viridis_c()
+panel_supp_d <- plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$ECOTYPE_NNET, shape = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey")) +
+  labs(color = "Ecotype", shape = "Subpopulation")
+plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$SUBPOP) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
+plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$ATLANTIC_Q) +
+  scale_color_viridis_c()
+plot(pavir_svd, type = "scores", scores = 5:6) +
+  aes(color = pavir_1$MIDWEST_DA) +
+  scale_color_viridis_c()
+
+sum(pavir_svd$d[1:2])/sum(pavir_svd$d)
+sum(pavir_svd$d[1:4])/sum(pavir_svd$d)
+sum(pavir_svd$d[1:5])/sum(pavir_svd$d)
+sum(pavir_svd$d[1:5])/sum(pavir_svd$d)
+
+
+```
+
+# GWAS for supplement
+```{r}
+
+```
+
+# Mash results
+
+```{r}
+
+```
+
