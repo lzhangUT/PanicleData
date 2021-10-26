@@ -17,13 +17,13 @@ library(snpdiver)
 # devtools::load_all() if working in snpdiver folder
 library(tidyverse)
 library(bigsnpr)
+library(here)
 
-workingdir <- file.path("~", "Github", "PanicleData", "9-DiversityPanel")
-datadir <- file.path(workingdir, "data")
+datadir <- here("data")
 metadata <- readRDS(file.path(datadir, "metadata.rds"))
 phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN")
 
-bigsnp_inputs <- read_delim(file.path(workingdir, "analysis", 
+bigsnp_inputs <- read_delim(here("analysis", 
                                    "bigsnp_inputs.txt"),  delim = " ", 
                                    col_names = "SNPfiles") 
 subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
@@ -32,16 +32,16 @@ subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest",
                   Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
                   All = c("Atlantic", "Gulf", "Midwest", "4X"))
 
-outputdir <- file.path(workingdir, "analysis", "mash")
+outputdir <- here("analysis", "mash")
 if (!dir.exists(outputdir)) {
   dir.create(outputdir)
 }
 
-kinshipdir <- file.path(workingdir, "analysis", "heritability")
+kinshipdir <- here("analysis", "heritability")
 prefix1 <- "pvdiv_panicles_2019_BLUPs_kinship_geno_subset_"
 prefix2 <- "pvdiv_panicles_2019_BLUPs_kinship_"
 
-plantiddir <- file.path(workingdir, "analysis", "PLANT_ID_BLUPs")
+plantiddir <- here("analysis", "PLANT_ID_BLUPs")
 prefix3 <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
 prefix4 <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
 ```

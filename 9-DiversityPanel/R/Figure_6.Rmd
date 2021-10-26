@@ -68,13 +68,15 @@ panel_a <- phe %>%
   geom_violin(aes(y = MEAS)) +
   geom_point(data = ecotype_means, mapping = aes(x = SITE, y = Ecotype_mean,
                                                  color = ECOTYPE_NNET)) +
-  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000")) +
   geom_errorbar(data = ecotype_means, aes(x = SITE, ymin = Ecotype_mean - Ecotype_se*2, 
                     ymax = Ecotype_mean + Ecotype_se*2,
                     color = ECOTYPE_NNET), width = 0.25) +
-  theme(legend.position = "right")
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000"), 
+                     name = "Ecotype") +
+  theme(legend.position = "right") + 
+  labs(x = "Site", y = "Phenotypic measurement")
 
-panel_supp <- phe %>%
+panel_supp1 <- phe %>%
   ggplot(aes(x = SITE)) + 
   facet_grid(rows = vars(phe_name), scales = "free_y") +
   geom_violin(aes(y = MEAS)) +
@@ -84,8 +86,26 @@ panel_supp <- phe %>%
   geom_errorbar(data = subpop_means, aes(x = SITE, ymin = Subpop_mean - Subpop_se*2, 
                     ymax = Subpop_mean + Subpop_se*2,
                     color = SUBPOP), width = 0.25) +
-  theme(legend.position = "right")
+  theme(legend.position = "right") + 
+  labs(x = "Site", y = "Phenotypic measurement")
 
+phe %>%
+  filter(SUBPOP != "4X" & !(SUBPOP == "Midwest" & ECOTYPE_NNET == "Coastal") &
+            !(SUBPOP == "Atlantic" & ECOTYPE_NNET == "Lowland") & 
+            !(SUBPOP == "Gulf" & ECOTYPE_NNET == "Upland")) %>%
+  ggplot(aes(x = SUBPOP)) + 
+  facet_grid(cols = vars(SITE), rows = vars(phe_name), scales = "free_y") +
+  geom_violin(aes(y = MEAS, color = ECOTYPE_NNET)) +
+  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000"))
+
+panel_suppX1 <- phe %>%
+  filter(SUBPOP != "4X" & !(SUBPOP == "Midwest" & ECOTYPE_NNET == "Coastal") &
+            !(SUBPOP == "Atlantic" & ECOTYPE_NNET == "Lowland") & 
+            !(SUBPOP == "Gulf" & ECOTYPE_NNET == "Upland")) %>%
+  ggplot(aes(x = ECOTYPE_NNET)) + 
+  facet_grid(cols = vars(SITE), rows = vars(phe_name), scales = "free_y") +
+  geom_violin(aes(y = MEAS, color = SUBPOP)) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
 ```
 
 # heritability barplots
@@ -111,9 +131,10 @@ panel_b <- h2_table %>%
   filter(SITE != "All" & subpop == "three_subpops") %>%
   ggplot(aes(x = SITE, y = Estimate)) +
   geom_bar(aes(), stat = "identity", fill = "grey", color = "black") + 
-  facet_grid(rows = vars(phe_name), scales = "free_y") +
+  facet_grid(rows = vars(phe_name)) + #, scales = "free_y") +
   geom_errorbar(aes(ymin = Estimate - SE*2, 
-                    ymax = Estimate + SE*2), width = 0.25)
+                    ymax = Estimate + SE*2), width = 0.25) + 
+  labs(x = "Site", y = bquote('h'^2))
 
 panel_supp2 <- h2_specific1 %>%
   ggplot(aes(x = subpop, y = Estimate)) +
@@ -128,8 +149,12 @@ panel_supp2 <- h2_specific1 %>%
              linetype = 2)  +
   geom_hline(data = filter(h2_specific1, subpop == "three_subpops"), 
              mapping = aes(yintercept = Estimate - SE*2), color = "grey", 
-             linetype = 2)
+             linetype = 2) + 
+  labs(x = "Site", y = bquote('h'^2))
 
+h2_table %>%
+  filter(SITE != "All" & subpop == "three_subpops") %>%
+  arrange(phe)
 ```
 
 ```{r}
@@ -137,7 +162,7 @@ panel_supp2 <- h2_specific1 %>%
 .05/27
 ```
 
-# Phenotypic correlations
+# Phenotypic correlations Fig 6c
 
 ```{r}
 site_v2 <- list(PKLE = "PKLE", CLMB = "CLMB", KBSM = "KBSM")
@@ -184,7 +209,7 @@ if(isSymmetric(cor_phe)){
                          limits = c(-1, 1)) +
     #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
     # Add text labels for each tile with the covariance fraction
-    theme(legend.position = "right",
+    theme(legend.position = "none",
           axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
           #axis.text = element_blank(), # optionally remove this text
           axis.ticks = element_blank(),
@@ -195,16 +220,20 @@ if(isSymmetric(cor_phe)){
                                fill = "Phenotypic\ncorrelation")
 }
 
+
+  cov_dfall <- phe %>%
+    select(-PHE, -manu_site, -PLOT_GL) %>%
+    pivot_wider(names_from = c("phe_name", "SITE"), values_from = "MEAS", values_fn = median)
+  cor_phe <- cor(cov_dfall[,(7:15)], use = "pairwise")
 ```
 
+# SVD for supplement
 ```{r}
 suffix_svd <- paste0("big_three_garden_SNPs", "All")
 pavir_svd <- readRDS(file = file.path(here("analysis", "mash"),
                                       paste0(suffix_svd,
                                                         "_svd.rds")))
-bigsnp_inputs <- read_delim(here("analysis", 
-                                   "bigsnp_inputs.txt"),  delim = " ", 
-                                   col_names = "SNPfiles") 
+
 metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
 k = 7
 pavir_kins <- readRDS("~/Github/pvdiv-genome/tensite_twoyear/Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds")
@@ -272,6 +301,411 @@ sum(pavir_svd$d[1:5])/sum(pavir_svd$d)
 # Mash results
 
 ```{r}
+bigsnp_inputs <- read_delim(here("analysis", 
+                                   "bigsnp_inputs.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") 
+snp <- snp_attach(bigsnp_inputs$SNPfiles[7])
+m <- readRDS(here("analysis", "mash",
+          "Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds"))
+
+library(snpdiver)
+p_1 <- mash_plot_marker_effect(m, snp, n = 1)
+p_2 <- mash_plot_marker_effect(m, snp, n = 3)
+p_3 <- mash_plot_marker_effect(m, snp, n = 5)
+p_4 <- mash_plot_marker_effect(m, snp, n = 7)
+p_5 <- mash_plot_marker_effect(m, snp, n = 9)
+p_6 <- mash_plot_marker_effect(m, snp, n = 1000)
+
+
+p2 <- mash_plot_sig_by_condition(m)
+p3 <- mash_plot_covar(m)
+mash_plot_Ulist(m)
+p4 <- mash_plot_manhattan_by_condition(m, snp, cond = c("PAN_LEN_TX2", "PAN_LEN_MO", "PAN_LEN_MI"))
+p5 <- mash_plot_pairwise_sharing(m)
+p6 <- mash_plot_Ulist(m)
+
+gxe_df <- get_GxE(m, thr.r2 = 0)  # thr.r2 does not work yet
+saveRDS(gxe_df, file = here("analysis/mash/GxE_df_full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds"))
+length(get_significant_results(m))
+48271/18704908
+
+35971/48271
+sum(gxe_df$S_2_no)
+sum(gxe_df$S_all_pairwise)
+sum(gxe_df$S_DS)
+sum(gxe_df$S_AP)
+sum(gxe_df$S_1_row)
+sum(gxe_df$S_CN)
+sum(gxe_df$S_1_col)
+77612+172846+3405271+567822
+4050705-3405271-77612-567822
+197488+172846
+
+# all_pairwise - 2_no - AP - CN
+sum(gxe_df$S_2_no)/sum(gxe_df$S_all_pairwise) # 84.07% No GxE
+sum(gxe_df$S_AP)/sum(gxe_df$S_all_pairwise)   # 1.92% AP
+sum(gxe_df$S_CN)/sum(gxe_df$S_all_pairwise)   # 14.02% CN
+```
+
+### Plot histogram of enrichments of random QTL intervals
+```{r}
+sig_random <- readRDS(here("analysis", "mash",
+                     paste0("1000_Random_QTL_df_significant_enrichments_of", 
+                            "_mash_BF_1per_tailclumped_PLANT_ID_geno_subset",
+                            ".rds")))
+
+panel_e <- tibble(`mash significant enrichments` = sig_random) %>%
+  arrange(desc(`mash significant enrichments`)) %>%
+  ggplot(aes(x = `mash significant enrichments`)) +
+  switchgrassGWAS::theme_oeco +
+  geom_histogram(binwidth = 1) + 
+  xlim(c(1, 18)) + ylab("") +
+  geom_vline(xintercept = 10, linetype = 2, color = "red")
 
 ```
+
+##### ---------
+
+# clumping with r2 of 0
+```{r}
+S <- snpdiver:::get_log10bf(m)
+
+mash_clumps_0r2 <- snp_clumping(pavir_snp$genotypes, 
+                                infos.chr = markers$CHRN, thr.r2 = 0, 
+                                infos.pos = markers$POS, 
+                                S = S)
+  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
+  write_csv(mash_df_clumped, file = file.path(outputdir,
+                                              paste0("Clumped_mash_output_df_",
+                                                     suffix, ".csv")))
+```
+
+Only 303 markers are present when markers are clumped using the log10BF and using an r^2 of 0.
+```{r}
+stdev <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_unlinked_0r2_stddev.rds"))
+markers <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_unlinked_0r2_markers.rds"))
+lfsr <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_unlinked_0r2_lfsr_sig.rds"))
+eff_means <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_unlinked_0r2_effect_means.rds"))
+snppos <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_clumped_0r2_SNPfile_positions.rds"))
+```
+
+```{r}
+markers %>%
+  ggplot(aes(x = POS, y = log10BF)) +
+  geom_point(aes(color = maf)) +
+  facet_wrap(vars(CHR), scales = "free_x") +
+  geom_hline(yintercept = 3, linetype = 2) +
+  theme(panel.spacing.x = unit(0.01, 'cm'))
+
+markers %>%
+  filter(log10BF > 3)
+100/(77/9)
+100/(77/3)
+
+markers 
+eff_means
+lfsr
+colnames(lfsr)[2:10] <- paste0(colnames(lfsr)[2:10], "_lfsr")
+stdev <- as_tibble(stdev)
+
+markers_0r2 <- markers %>%
+  add_column(PL_PKLE_Effect_Mean = eff_means$PAN_LEN_TX2_Effect_Mean,
+             PBN_PKLE_Effect_Mean = eff_means$PRIM_BN_TX2_Effect_Mean,
+             SBN_PKLE_Effect_Mean = eff_means$SEC_BN_TX2_Effect_Mean,
+             PL_CLMB_Effect_Mean = eff_means$PAN_LEN_MO_Effect_Mean,
+             PBN_CLMB_Effect_Mean = eff_means$PRIM_BN_MO_Effect_Mean,
+             SBN_CLMB_Effect_Mean = eff_means$SEC_BN_MO_Effect_Mean,
+             PL_KBSM_Effect_Mean = eff_means$PAN_LEN_MI_Effect_Mean,
+             PBN_KBSM_Effect_Mean = eff_means$PRIM_BN_MI_Effect_Mean,
+             SBN_KBSM_Effect_Mean = eff_means$SEC_BN_MI_Effect_Mean,
+             PL_PKLE_lfsr = lfsr$PAN_LEN_TX2_lfsr,
+             PBN_PKLE_lfsr = lfsr$PRIM_BN_TX2_lfsr,
+             SBN_PKLE_lfsr = lfsr$SEC_BN_TX2_lfsr,
+             PL_CLMB_lfsr = lfsr$PAN_LEN_MO_lfsr,
+             PBN_CLMB_lfsr = lfsr$PRIM_BN_MO_lfsr,
+             SBN_CLMB_lfsr = lfsr$SEC_BN_MO_lfsr,
+             PL_KBSM_lfsr = lfsr$PAN_LEN_MI_lfsr,
+             PBN_KBSM_lfsr = lfsr$PRIM_BN_MI_lfsr,
+             SBN_KBSM_lfsr = lfsr$SEC_BN_MI_lfsr,
+             PL_PKLE_Effect_SD = stdev$PAN_LEN_TX2_Effect_SD,
+             PBN_PKLE_Effect_SD = stdev$PRIM_BN_TX2_Effect_SD,
+             SBN_PKLE_Effect_SD = stdev$SEC_BN_TX2_Effect_SD,
+             PL_CLMB_Effect_SD = stdev$PAN_LEN_MO_Effect_SD,
+             PBN_CLMB_Effect_SD = stdev$PRIM_BN_MO_Effect_SD,
+             SBN_CLMB_Effect_SD = stdev$SEC_BN_MO_Effect_SD,
+             PL_KBSM_Effect_SD = stdev$PAN_LEN_MI_Effect_SD,
+             PBN_KBSM_Effect_SD = stdev$PRIM_BN_MI_Effect_SD,
+             SBN_KBSM_Effect_SD = stdev$SEC_BN_MI_Effect_SD)
+
+markers_0r2 <- markers_0r2 %>%
+  mutate(PL_PKLE_Var_Exp = 2*maf*(1-maf)*PL_PKLE_Effect_Mean^2,
+         PBN_PKLE_Var_Exp = 2*maf*(1-maf)*PBN_PKLE_Effect_Mean^2,
+         SBN_PKLE_Var_Exp = 2*maf*(1-maf)*SBN_PKLE_Effect_Mean^2,
+         PL_CLMB_Var_Exp = 2*maf*(1-maf)*PL_CLMB_Effect_Mean^2,
+         PBN_CLMB_Var_Exp = 2*maf*(1-maf)*PBN_CLMB_Effect_Mean^2,
+         SBN_CLMB_Var_Exp = 2*maf*(1-maf)*SBN_CLMB_Effect_Mean^2,
+         PL_KBSM_Var_Exp = 2*maf*(1-maf)*PL_KBSM_Effect_Mean^2,
+         PBN_KBSM_Var_Exp = 2*maf*(1-maf)*PBN_KBSM_Effect_Mean^2,
+         SBN_KBSM_Var_Exp = 2*maf*(1-maf)*SBN_KBSM_Effect_Mean^2
+         ) 
+```
+
+MAF in the three different subpopulations for these top SNPs
+```{r}
+atlantic <- phe %>% filter(SUBPOP == "Atlantic") %>%
+  select(PLANT_ID) %>% unique()
+midwest <- phe %>% filter(SUBPOP == "Midwest") %>%
+  select(PLANT_ID) %>% unique()
+gulf <- phe %>% filter(SUBPOP == "Gulf") %>%
+  select(PLANT_ID) %>% unique()
+maf381 <- phe %>%
+   select(PLANT_ID) %>% unique()
+
+atlanticn <- which(snp$fam$sample.ID %in% atlantic$PLANT_ID)
+midwestn <- which(snp$fam$sample.ID %in% midwest$PLANT_ID)
+gulfn <- which(snp$fam$sample.ID %in% gulf$PLANT_ID)
+maf381n <- which(snp$fam$sample.ID %in% maf381$PLANT_ID)
+
+atlanticmaf <- snp_MAF(snp$genotypes, ind.row = atlanticn, ind.col = snppos)
+midwestmaf <- snp_MAF(snp$genotypes, ind.row = midwestn, ind.col = snppos)
+gulfmaf <- snp_MAF(snp$genotypes, ind.row = gulfn, ind.col = snppos)
+maf381 <- snp_MAF(snp$genotypes, ind.row = maf381n, ind.col = snppos)
+
+markers_0r2 <- markers_0r2 %>%
+  add_column(MAF_Atlantic = atlanticmaf, MAF_Gulf = gulfmaf, MAF_Midwest = midwestmaf)
+markers_0r2 <- markers_0r2 %>%
+  add_column(MAF_382 = maf381)
+```
+
+```{r}
+markers_0r2 %>%
+  filter(log10BF > 1.3)
+
+markers_0r2_longer <- markers_0r2 %>%
+  pivot_longer(cols = 7:42, names_to = "Meas_type", values_to = "MEAS") %>%
+  mutate(Meas_type = case_when(grepl("Effect_SD", Meas_type) ~ str_replace(Meas_type, "Effect_SD", "EffectSD"),
+                               grepl("Effect_Mean", Meas_type) ~ str_replace(Meas_type, "Effect_Mean", "EffectMean"),
+                               grepl("Var_Exp", Meas_type) ~ str_replace(Meas_type, "Var_Exp", "VarExp"),
+                               TRUE ~ Meas_type)) %>%
+  separate(Meas_type, into = c("PHE", "SITE", "Meas_type"), sep = "_") %>%
+  pivot_wider(names_from = Meas_type, values_from = MEAS) %>%
+  arrange(CHR, POS, PHE)
+```
+
+```{r}
+markers_0r2_longer %>%
+  filter(log10BF > 2) %>%
+  group_by(PHE, SITE) %>%
+  summarise(sum(VarExp))
+markers_0r2_longer %>%
+  filter(log10BF > 3) %>%
+  group_by(PHE, SITE) %>%
+  summarise(sum(VarExp))
+markers_0r2_longer %>%
+  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  filter(lfsr < 0.05) %>%
+  group_by(PHE, SITE) %>%
+  summarise(VarExp_381 = sum(VarExp_381))
+
+markers_0r2_longer %>%
+  filter(lfsr < 0.05) %>%
+  group_by(CHR, POS) %>%
+  tally()
+markers_0r2_longer %>%
+  filter(log10BF > 1.3 & lfsr < 0.05) %>%
+  group_by(CHR, POS) %>%
+  tally()
+markers_0r2_longer %>%
+  filter(lfsr < 0.05) %>%
+  group_by(CHR, POS) %>%
+  tally() %>%
+  group_by(n) %>%
+  tally()
+
+187/303
+get_significant_results(m)[1:10]
+```
+
+```{r}
+82/(82+11+22+23+19+15+13+1+1)
+
+(105+77+77+63+60+88)/6*52
+4073/2/2/2/2/2
+2^12
+(73-64)/52
+(105+77+77+63+60+88)/6+(73-64)/52
+78.77*52
+35*52-15
+4096-1806
+```
+
+```{r}
+p_1
+p_2
+p_3
+p_4
+p_5
+p_6
+```
+
+
+```{r}
+markers_0r2_longer <- markers_0r2_longer %>%
+  mutate(MAF_specific = case_when(MAF_Atlantic > MAF_382 & MAF_Gulf < MAF_382 & 
+                                    MAF_Midwest < MAF_382 ~ "Atlantic",
+                                  MAF_Atlantic < MAF_382 & MAF_Gulf > MAF_382 &
+                                    MAF_Midwest < MAF_382 ~ "Gulf",
+                                  MAF_Atlantic < MAF_382 & MAF_Gulf < MAF_382 & 
+                                    MAF_Midwest > MAF_382 ~ "Midwest",
+                                  TRUE ~ "Shared")) 
+
+markers_0r2_longer %>%
+  group_by(MAF_specific) %>%
+  tally() %>%
+  mutate(n = n/9)
+
+```
+
+
+```{r}
+markers_0r2_longer$SITE <- factor(markers_0r2_longer$SITE, levels = c("PKLE", "CLMB", "KBSM"))
+markers_0r2_longer$MAF_specific <- factor(markers_0r2_longer$MAF_specific, levels = c("Gulf", "Midwest", "Atlantic", "Shared"))
+markers_0r2_longer$PHE <- factor(markers_0r2_longer$PHE, levels = c("PL", "PBN", "SBN"))
+
+panel_f <- markers_0r2_longer %>%
+  mutate(pos_label = paste(round(POS/1000000, 2), "Mb", sep = " ")) %>%
+  filter(log10BF > 5) %>%
+  ggplot(aes(x = SITE, y = EffectMean, color = MAF_382)) +
+  geom_point(aes()) +
+  facet_grid(rows = vars(PHE), cols = vars(CHR, pos_label)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_errorbar(aes(ymin = EffectMean - EffectSD, ymax = EffectMean + EffectSD)) +
+  theme(panel.spacing.x = unit(0.005, 'cm'),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "right") +
+  scale_color_viridis_c(option = "B", limits = c(0,0.1), name = "MAF") +
+  labs(y = "SNP Effects", x = "Site")
+
+markers_0r2_longer %>%
+  filter(log10BF > 5) %>%
+  ggplot(aes(x = SITE, y = EffectMean)) +
+  geom_point() +
+  facet_grid(rows = vars(CHR, POS), cols = vars(PHE)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_errorbar(aes(ymin = EffectMean - EffectSD, ymax = EffectMean + EffectSD)) +
+  coord_flip() +
+  theme(panel.spacing.x = unit(0.02, 'cm')) 
+
+markers_0r2_longer %>%
+  filter(log10BF > 2 & CHR %in% c("Chr09K", "Chr09N")) %>%
+  ggplot(aes(x = SITE, y = EffectMean, color = MAF_specific)) +
+  geom_point() +
+  facet_grid(rows = vars(PHE), cols = vars(CHR, POS)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_errorbar(aes(ymin = EffectMean - EffectSD, ymax = EffectMean + EffectSD)) +
+  theme(panel.spacing.x = unit(0.01, 'cm'),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))  +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83", "grey"))
+
+saveRDS(markers_0r2_longer, file = here("analysis/mash/Marker_summary_statistics_long_mash_PLANT_ID_geno_subset_0r2.rds"))
+```
+
+
+# Figure 6
+
+Put together Figure 6 from the panels built above
+```{r}
+
+```
+
+
+```{r}
+legend_corr <- get_legend(p6$simple_het_3_ggobject)
+
+
+panel_c <- ggdraw() +
+  draw_plot(site_plots[[1]], x = 0, y = 0, width = 0.3, height = 1) +
+  draw_plot(site_plots[[2]], x = 0.3, y = 0, width = 0.3, height = 1) +
+  draw_plot(site_plots[[3]], x = 0.6, y = 0, width = 0.3, height = 1) +
+  draw_plot(legend_corr, x = 0.9, y = 0, width = 0.1, height = 1)
+
+```
+
+```{r}
+library(ggrepel)
+# install.packages("ggrepel")
+gxe_df
+panel_d <- p3$covar_df %>%
+  filter(Mass > 0) %>%
+  ggplot(aes(x = `Covariance Matrix`, y = Mass)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  geom_label_repel(aes(label = round(Mass, 5)), direction = "x", size = 3)
+18700000*.00063725
+
+markers_0r2_longer %>%
+  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  filter(lfsr < 0.05) %>%
+  group_by(PHE, SITE) %>%
+  summarise(VarExp_381 = sum(VarExp_381))
+markers_0r2_longer %>%
+  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  filter(lfsr < 0.05) %>%
+  group_by(PHE, SITE) %>%
+  tally()
+gxe_df
+markers_0r2_longer %>%
+  ggplot(aes(x = MAF_382)) +
+  geom_histogram()
+```
+
+```{r}
+36.3/83.93
+17.445/75.22
+19/80.21
+79.21/84.14
+84.5987/81.27
+75/78.06
+17.4/68.09
+20.36/64.53
+23.4/58.83
+
+
+```
+
+
+```{r}
+panel_a   # phenotypic distributions
+panel_b   # heritabilities
+panel_c   # small phenotypic correlations by site - 
+panel_d   # covar with > 0.01% posterior weight
+panel_e   # mash and QTL overlap
+panel_f
+
+(figure6 <- ggdraw() +
+  draw_plot(panel_a, x = 0, y = 0.5, width = 0.3, height = 0.5) +
+  draw_plot(panel_b, x = 0.3, y = 0.5, width = 0.2, height = 0.5) +
+  draw_plot(panel_c, x = 0.5, y = 0.75, width = 0.5, height = 0.25) +
+  draw_plot(panel_d, x = 0.5, y = 0.5, width = 0.25, height = 0.25) +
+  draw_plot(panel_e, x = 0.75, y = 0.5, width = 0.25, height = 0.25) +
+  draw_plot(panel_f, x = 0, y = 0, width = 1, height = 0.5) +
+  draw_label("A", x = 0.01, y = .98) +
+  draw_label("B", x = 0.31, y = .98) +
+  draw_label("C", x = 0.51, y = .98) +
+  draw_label("D", x = 0.51, y = .76) +
+  draw_label("E", x = 0.74, y = .76) +
+  draw_label("F", x = 0.01, y = .49) +
+  draw_label("MAF", x = 0.955, y = .37, size = 11) +
+  draw_label("Correlation", x = 0.96, y = .98, size = 11) +
+  draw_label("Ecotype", x = 0.255, y = .905, size = 11)
+    
+    ) 
+  
+
+
+save_plot(filename = here("analysis/mash/Figure6.svg"), figure6, base_height = 7, base_width = 13)
+
+
+```
+
 
