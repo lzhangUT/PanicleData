@@ -157,6 +157,7 @@ h2_table %>%
   arrange(phe)
 ```
 
+
 ```{r}
 27*.05
 .05/27
@@ -225,77 +226,6 @@ if(isSymmetric(cor_phe)){
     select(-PHE, -manu_site, -PLOT_GL) %>%
     pivot_wider(names_from = c("phe_name", "SITE"), values_from = "MEAS", values_fn = median)
   cor_phe <- cor(cov_dfall[,(7:15)], use = "pairwise")
-```
-
-# SVD for supplement
-```{r}
-suffix_svd <- paste0("big_three_garden_SNPs", "All")
-pavir_svd <- readRDS(file = file.path(here("analysis", "mash"),
-                                      paste0(suffix_svd,
-                                                        "_svd.rds")))
-
-metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
-k = 7
-pavir_kins <- readRDS("~/Github/pvdiv-genome/tensite_twoyear/Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds")
-pavir_1 <- tibble(PLANT_ID = colnames(pavir_kins)) %>%
-  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET, SUBPOP, LATITUDE, LONGITUDE, ATLANTIC_Q, MIDWEST_DA))
-pavir_1$ECOTYPE_NNET <- factor(pavir_1$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
-
-panel_supp_a <- plot(pavir_svd)
-str(pavir_svd)
-plot(pavir_svd, type = "loadings", loadings = 1:4)
-
-plot(pavir_svd, type = "scores", scores = 1:2) +
-  aes(color = pavir_1$ECOTYPE_NNET) +
-  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey"))
-panel_supp_b <- plot(pavir_svd, type = "scores", scores = 1:2) +
-  aes(color = pavir_1$SUBPOP, shape = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83")) +
-  labs(color = "Subpopulation", shape = "Subpopulation")
-plot(pavir_svd, type = "scores", scores = 2:3) +
-  aes(color = pavir_1$ECOTYPE_NNET) +
-  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey"))
-plot(pavir_svd, type = "scores", scores = 2:3) +
-  aes(color = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
-panel_supp_c <- plot(pavir_svd, type = "scores", scores = 3:4) +
-  aes(color = pavir_1$ECOTYPE_NNET, shape = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey")) +
-  labs(color = "Ecotype", shape = "Subpopulation")
-plot(pavir_svd, type = "scores", scores = 3:4) +
-  aes(color = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
-plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$LONGITUDE) +
-  scale_color_viridis_c()
-plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$LATITUDE) +
-  scale_color_viridis_c()
-panel_supp_d <- plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$ECOTYPE_NNET, shape = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#3366CC", "#FFCC00", "#CC0000", "grey")) +
-  labs(color = "Ecotype", shape = "Subpopulation")
-plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$SUBPOP) +
-  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83"))
-plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$ATLANTIC_Q) +
-  scale_color_viridis_c()
-plot(pavir_svd, type = "scores", scores = 5:6) +
-  aes(color = pavir_1$MIDWEST_DA) +
-  scale_color_viridis_c()
-
-sum(pavir_svd$d[1:2])/sum(pavir_svd$d)
-sum(pavir_svd$d[1:4])/sum(pavir_svd$d)
-sum(pavir_svd$d[1:5])/sum(pavir_svd$d)
-sum(pavir_svd$d[1:5])/sum(pavir_svd$d)
-
-
-```
-
-# GWAS for supplement
-```{r}
-
 ```
 
 # Mash results
@@ -689,12 +619,12 @@ panel_f
   draw_plot(panel_d, x = 0.5, y = 0.5, width = 0.25, height = 0.25) +
   draw_plot(panel_e, x = 0.75, y = 0.5, width = 0.25, height = 0.25) +
   draw_plot(panel_f, x = 0, y = 0, width = 1, height = 0.5) +
-  draw_label("A", x = 0.01, y = .98) +
-  draw_label("B", x = 0.31, y = .98) +
-  draw_label("C", x = 0.51, y = .98) +
-  draw_label("D", x = 0.51, y = .76) +
-  draw_label("E", x = 0.74, y = .76) +
-  draw_label("F", x = 0.01, y = .49) +
+  draw_label("a", x = 0.01, y = .98) +
+  draw_label("b", x = 0.31, y = .98) +
+  draw_label("c", x = 0.51, y = .98) +
+  draw_label("d", x = 0.51, y = .76) +
+  draw_label("e", x = 0.74, y = .76) +
+  draw_label("f", x = 0.01, y = .49) +
   draw_label("MAF", x = 0.955, y = .37, size = 11) +
   draw_label("Correlation", x = 0.96, y = .98, size = 11) +
   draw_label("Ecotype", x = 0.255, y = .905, size = 11)
