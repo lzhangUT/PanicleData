@@ -126,7 +126,139 @@ bigsnp_inputs <- read_delim(here("analysis",
                                    "bigsnp_inputs.txt"),  delim = " ", 
                                    col_names = "SNPfiles") 
 snp <- snp_attach(bigsnp_inputs$SNPfiles[7])
+
+gwas_df <- big_attach(here("analysis", "mash",
+                           "gwas_effects_PLANT_ID_geno_subset.rds"))
+gwas_colnames <- 
+  read_csv(here("analysis", "mash",
+                "gwas_effects_PLANT_ID_geno_subset_column_names.csv"))
+gwas_metadata <- 
+  read_csv(here("analysis", "mash",
+                "gwas_effects_PLANT_ID_geno_subset_associated_metadata.csv"))
+gwas_metadata <- gwas_metadata %>%
+  mutate(phe_name = str_replace_all(phe, "PAN_LEN", "PL")) %>%
+  mutate(phe_name = str_replace_all(phe_name, "PRIM_BN", "PBN")) %>%
+  mutate(phe_name = str_replace_all(phe_name, "MI", "KBSM")) %>%
+  mutate(phe_name = str_replace_all(phe_name, "SEC_BN", "SBN")) %>%
+  mutate(phe_name = str_replace_all(phe_name, "TX2", "PKLE")) %>%
+  mutate(phe_name = str_replace_all(phe_name, "MO", "CLMB"))
+
+bonferroni <- -log10(0.05/length(snp$map$physical.pos))
+panel_labels <- list(row1 = c("a", "b"),
+                     row2 = c("c", "d"),
+                     row3 = c("e", "f"),
+                     row4 = c("g", "h"),
+                     row5 = c("i", "j"),
+                     row6 = c("k", "l"),
+                     row7 = c("m", "n"),
+                     row8 = c("o", "p"),
+                     row9 = c("q", "r"))
+
+for(i in 1:nrow(gwas_metadata)){
+  ind = i*3
+  man_PL_PKLE <- snpdiver:::get_manhattan(gwas_df, ind = ind, snp = snp, 
+                                        thresh = bonferroni, 
+                                        ncores = nb_cores())
+  man_PL_PKLE <- man_PL_PKLE + labs(title = gwas_metadata$phe_name[i])
+
+  qq_PL_PKLE <- snpdiver::get_qqplot(X = gwas_df, ind = ind, lambdaGC = TRUE)
+  row1 <- plot_grid(man_PL_PKLE, qq_PL_PKLE, rel_widths = c(0.8, 0.2), 
+                    labels = panel_labels[[i]])
+  save_plot(here("analysis", "gwas", paste0(gwas_metadata$phe_name[i],
+                                            "_Manhattan_QQ.png")), 
+            plot = row1, base_height = 2.5, base_width = 12)
+  }
+
+i=1
+
 ```
+
+```{r}
+
+X <- gwas_df
+ind = 3
+
+#' Create a quantile-quantile plot with ggplot2.
+#'
+#' @description Assumptions for this quantile quantile plot:
+#'     Expected P values are uniformly distributed.
+#'     Confidence intervals assume independence between tests.
+#'     We expect deviations past the confidence intervals if the tests are
+#'     not independent.
+#'     For example, in a genome-wide association study, the genotype at any
+#'     position is correlated to nearby positions. Tests of nearby genotypes
+#'     will result in similar test statistics.
+#'
+#' @param ps Numeric vector of p-values.
+#' @param ci Numeric. Size of the confidence interval, 0.95 by default.
+#' @param lambdaGC Logical. Add the Genomic Control coefficient as subtitle to
+#'     the plot?
+#'
+#' @import ggplot2
+#' @importFrom tibble as_tibble
+#' @importFrom rlang .data
+#' @importFrom stats qbeta ppoints
+#' @param tol Numeric. Tolerance for optional Genomic Control coefficient.
+#'
+#' @return A ggplot2 plot.
+#'
+#' @export
+get_big_qqplot <- function(X = NULL, ind = NULL, ps, ci = 0.95,
+                       lambdaGC = FALSE, tol = 1e-8, ncores = 1) {
+  if(!is.null(X) & !is.null(ind)){
+    ps <- X[,ind]
+    ps <- 10^-ps
+  }
+  ps <- ps[which(!is.na(ps))]
+  n  <- length(ps)
+
+  df <- data.frame(
+    observed = -log10(sort(ps)),
+    expected = -log10(ppoints(n)),
+    clower   = -log10(qbeta(p = (1 - ci) / 2, shape1 = 1:n, shape2 = n:1)),
+    cupper   = -log10(qbeta(p = (1 + ci) / 2, shape1 = 1:n, shape2 = n:1))
+  )
+
+  df_round <- snpdiver:::round_xy(df$expected, df$observed, cl = df$clower, 
+                                  cu = df$cupper)
+  log10Pe <- expression(paste("Expected -log"[10], plain("("), italic(p-value),
+                              plain(")")))
+  log10Po <- expression(paste("Observed -log"[10], plain("("), italic(p-value),
+                              plain(")")))
+  p1 <- ggplot(as_tibble(df_round)) +
+    geom_point(aes(.data$expected, .data$observed), shape = 1, size = 1) +
+    geom_abline(intercept = 0, slope = 1, size = 1.5, color = "red") +
+    geom_line(aes(.data$expected, .data$cupper), linetype = 2) +
+    geom_line(aes(.data$expected, .data$clower), linetype = 2) +
+    xlab(log10Pe) +
+    ylab(log10Po) +
+    theme_classic() +
+    theme(axis.title = element_text(size = 10),
+          axis.text = element_text(size = 10),
+          axis.line.x = element_line(size = 0.35, colour = 'grey50'),
+          axis.line.y = element_line(size = 0.35, colour = 'grey50'),
+          axis.ticks = element_line(size = 0.25, colour = 'grey50'),
+          legend.justification = c(1, 0.75), legend.position = c(1, 0.9),
+          legend.key.size = unit(0.35, 'cm'),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 9),
+          legend.text.align = 0, legend.background = element_blank(),
+          plot.subtitle = element_text(size = 10, vjust = 0),
+          strip.background = element_blank(),
+          strip.text = element_text(hjust = 0.5, size = 10 ,vjust = 0),
+          strip.placement = 'outside', panel.spacing.x = unit(-0.4, 'cm'))
+
+  if (lambdaGC) {
+    lamGC <- get_lambdagc(ps = ps, tol = tol)
+    expr <- substitute(expression(lambda[GC] == l), list(l = lamGC))
+    p1 + labs(subtitle = eval(expr))
+  } else {
+    p1
+  }
+}
+
+```
+
 
 # Figure S3 
 Ecotype specific phenotype distributions
@@ -271,12 +403,73 @@ save_plot(filename = here("analysis/mash/Figure_S5.svg"), figure_S5,
 
 
 # Table S1
-Add to this. Add diversity panel phenotypes at three sites, and BLUPs for model PHE ~ random(PLANT_ID)
+Add to this. Add diversity panel phenotypes at three sites, and BLUPs for model PHE ~ idv(PLANT_ID) done for each site & each phenotype (9 models total)
+```{r}
+metadata <- readRDS(here("data/metadata.rds"))
+phe <- readRDS(here("data/panicle_phenotypes_genotype_subset.rds"))
+phe <- phe %>%
+  mutate(phe_name = case_when(PHE == "PAN_LEN" ~ "PL",
+                              PHE == "PRIM_BN" ~ "PBN",
+                              PHE == "SEC_BN" ~ "SBN"))
+phe$ECOTYPE_NNET <- factor(phe$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
+phe$SITE <- factor(phe$SITE, levels = c("PKLE", "CLMB", "KBSM"))
+phe$phe_name <- factor(phe$phe_name, levels = c("PL", "PBN", "SBN"))
+
+phe %>%
+  select(SITE, PLANT_ID, ECOTYPE_NNET, SUBPOP, PLOT_GL, REP, phe_name, MEAS) %>%
+  pivot_wider(names_from = phe_name, values_from = MEAS) %>%
+  rename(ECOTYPE = ECOTYPE_NNET) %>%
+  write_csv(here("writeup/Table_S1_part2.csv"))
+```
+
+SITE	PLANT_ID	ECOTYPE SUBPOP	PLOT_GL REP PL	PBN	SBN   | Raw data
+SITE	PLANT_ID	ECOTYPE SUBPOP PL	PBN	SBN   | BLUPs
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(here("data", 
+                          paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  separate(PHE_SITE, into = c("PHE", "SITE"), sep = "_") %>%
+  select(SITE, PLANT_ID, ECOTYPE_NNET, SUBPOP, PHE, MEAS) %>%
+  pivot_wider(names_from = PHE, values_from = MEAS) %>%
+  rename(ECOTYPE = ECOTYPE_NNET) %>%
+  write_csv(here("writeup/Table_S1_part3.csv"))
+```
+
 
 # Table S2
 Already made. GWAS lambda GC outputs and other GWAS parameters
 
 # Table S3 Mash table. SNPs significant for each number of conditions, for 18.7M SNPs
+```{r}
+m <- readRDS(here("analysis", "mash",
+          "Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds"))
+
+library(snpdiver)
+
+(p2 <- mash_plot_sig_by_condition(m, thresh = .005))
+p2$sighist %>%
+  write_csv(here("writeup/Table_S3_sig_SNPs_lfsr0.5per_by_number_of_conditions.csv"))
+
+(p2 <- mash_plot_sig_by_condition(m, thresh = .05))
+p2$sighist %>%
+  write_csv(here("writeup/Table_S3_sig_SNPs_lfsr5per_by_number_of_conditions.csv"))
+```
+
 
 # Table S4
 Annotations in 20kb region around significant mash SNPs, using r^2 of 0.2 to keep the most significant SNP in each linkage group.
@@ -288,3 +481,43 @@ Already made in the Analysis_QTL_enrichments_and_annotations.Rmd file
 
 # Table S6
 The variance explained by the SNPs with significant lfsr, using r^2 of 0 to keep the most significant SNP in each linkage group. This is 187 SNPs total. Only add variance explained for conditions where the SNP has a lfsr < 0.05. use MAF*(1-MAF)*Effect^2 as the equation, and use the MAF for the 381 genotypes, and use the Effect point estimate estimated using mash.
+```{r}
+markers_0r2_longer <-  readRDS(file = here("analysis/mash/Marker_summary_statistics_long_mash_PLANT_ID_geno_subset_0r2.rds"))
+
+markers_0r2_longer <- markers_0r2_longer %>%
+  mutate(MAF_specific = case_when(MAF_Atlantic > MAF_382 & MAF_Gulf < MAF_382 & 
+                                    MAF_Midwest < MAF_382 ~ "Atlantic",
+                                  MAF_Atlantic < MAF_382 & MAF_Gulf > MAF_382 &
+                                    MAF_Midwest < MAF_382 ~ "Gulf",
+                                  MAF_Atlantic < MAF_382 & MAF_Gulf < MAF_382 & 
+                                    MAF_Midwest > MAF_382 ~ "Midwest",
+                                  TRUE ~ "Shared")) 
+
+#confirm varexp calculation is correct
+markers_0r2_longer <- markers_0r2_longer %>%
+  select(SITE, PHE, CHR, POS, log10BF, lfsr, EffectMean, EffectSD, VarExp, MAF_382, MAF_specific, MAF_Atlantic, MAF_Gulf, MAF_Midwest) %>%
+  mutate(log10BF = as.numeric(log10BF),
+         VarExp382 = 2*(MAF_382)*(1-MAF_382)*EffectMean^2,
+         VarExpAtlantic = 2*(MAF_Atlantic)*(1-MAF_Atlantic)*EffectMean^2,
+         VarExpGulf = 2*(MAF_Gulf)*(1-MAF_Gulf)*EffectMean^2,
+         VarExpMidwest = 2*(MAF_Midwest)*(1-MAF_Midwest)*EffectMean^2) %>%
+  rename(MAF = MAF_382, Subpop_specific = MAF_specific) 
+markers_0r2_longer %>%
+  write_csv(here("writeup/Table_S6_part2.csv"))
+
+markers_0r2_longer %>%
+  filter(lfsr < 0.05) %>%
+  group_by(PHE, SITE) %>%
+  summarise(VarExpFull = sum(VarExp382),
+            VarExpAtlantic = sum(VarExpAtlantic),
+            VarExpGulf = sum(VarExpGulf),
+            VarExpMidwest = sum(VarExpMidwest))
+markers_0r2_longer %>%
+  filter(lfsr < 0.05) %>%
+  group_by(Subpop_specific, PHE, SITE) %>%
+  summarise(VarExpFull = sum(VarExp382),
+            VarExpAtlantic = sum(VarExpAtlantic),
+            VarExpGulf = sum(VarExpGulf),
+            VarExpMidwest = sum(VarExpMidwest))
+```
+

@@ -432,7 +432,7 @@ markers_0r2_longer %>%
   group_by(PHE, SITE) %>%
   summarise(sum(VarExp))
 markers_0r2_longer %>%
-  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  mutate(VarExp_381 = 2*MAF_382*(1-MAF_382)*EffectMean^2) %>%
   filter(lfsr < 0.05) %>%
   group_by(PHE, SITE) %>%
   summarise(VarExp_381 = sum(VarExp_381))
@@ -574,12 +574,12 @@ panel_d <- p3$covar_df %>%
 18700000*.00063725
 
 markers_0r2_longer %>%
-  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  mutate(VarExp_381 = 2*MAF_382*(1-MAF_382)*EffectMean^2) %>%
   filter(lfsr < 0.05) %>%
   group_by(PHE, SITE) %>%
   summarise(VarExp_381 = sum(VarExp_381))
 markers_0r2_longer %>%
-  mutate(VarExp_381 = MAF_382*(1-MAF_382)*EffectMean^2) %>%
+  mutate(VarExp_381 = 2*MAF_382*(1-MAF_382)*EffectMean^2) %>%
   filter(lfsr < 0.05) %>%
   group_by(PHE, SITE) %>%
   tally()

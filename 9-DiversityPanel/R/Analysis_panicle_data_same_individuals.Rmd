@@ -1,0 +1,1312 @@
+---
+title: "Panicle data same individuals"
+author: "Alice MacQueen"
+date: "5/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+#library(asreml)
+library(snpdiver)
+library(cowplot)
+library(matrixStats)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+```
+
+# Goals
+
+The idea here is to do the same sorts of analyses as in the Panicle_data Rmd
+file, but just do them on whatever subset of genotypes exist at all three sites. That way, all differences in correlation and heritabilities will be due to environmental variation or GxE, and none will be due to the fact that the complement of genotypes differs between common gardens.
+
+Ideally, I could compare this analysis to the previous, less balanced analysis.
+Also, for GWAS, I could compare GWAS on these raw data, GWAS on these but BLUPs,
+GWAS on the full raw data, and GWAS on the BLUPs for all genotypes. 
+What looks best? 
+What gives the strongest signal?
+
+In reality here I've done both analyses on the genotypic subset and analyses on the full set of genotypes, because it's easier to directly compare these if I run them at the same time. 
+
+## Load data
+
+```{r}
+prefix = "pvdiv_panicles_2019_"
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019")
+phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+sites <- readRDS(file.path(datadir, "sites.rds"))
+color_code <- readRDS(file.path(datadir, "color_code.rds"))
+subpops <- readRDS(file.path(datadir, "subpops.rds"))
+color_code2 <- c("grey", "#090906", "#6E91CB", "#F47F72", "#442C83")
+```
+
+```{r}
+panicles_cor <- phenotypes %>%
+  filter(grepl("PAN_LEN", PHE) | grepl("PRIM", PHE) | grepl("SEC", PHE) | PHE == "HT_PAN_EOS" | PHE == "BIOMASS" | PHE == "FL50") %>%
+  filter(SITE %in% c("KBSM", "CLMB", "PKLE")) %>%
+  filter(MEAS < 100000)
+
+panicles_cor_wide <- panicles_cor %>%
+  select(PLANT_ID, MEAS, manu_site, PHE) %>%
+  arrange(manu_site) %>%
+  pivot_wider(id_cols = PLANT_ID, names_from = c("manu_site", "PHE"), values_from = MEAS, values_fn = mean) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+```
+
+## Subset to individuals present at all gardens
+
+```{r}
+panicles <- phenotypes %>%
+  filter(grepl("PAN_LEN", PHE) | grepl("PRIM", PHE) | grepl("SEC", PHE))
+
+pan_1 <- panicles %>%
+  pivot_wider(id_cols = c(PLANT_ID, SUBPOP), names_from = c("manu_site", "PHE"), values_from = MEAS, values_fn = mean) %>%
+  filter(SUBPOP !="8X")
+
+pan_1 %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  mutate(Any_NA = rowSums(!is.na(pan_1))) %>%
+  select(PLANT_ID, SUBPOP, Any_NA, everything()) %>%
+  filter(Any_NA == 38) %>%
+  group_by(SUBPOP, ECOTYPE_NNET) %>%
+  tally()
+
+pan_1 %>%
+  group_by(SUBPOP) %>%
+  tally()
+
+pan_subset <- pan_1 %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET)) %>%
+  mutate(Any_NA = rowSums(!is.na(pan_1))) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, Any_NA, everything()) %>%
+  filter(Any_NA > 36) %>%
+  arrange(Any_NA)
+
+pan_subset_phe <- phenotypes %>%
+  filter(PLANT_ID %in% pan_subset$PLANT_ID) %>%
+  filter(grepl("_A$", PHE) | grepl("_B$", PHE) | grepl("_C$", PHE)) %>%
+  filter(SITE %in% c("KBSM", "CLMB", "PKLE")) %>%
+  mutate(MEAS = case_when(MEAS == 105601 ~ 10,
+                   TRUE ~ MEAS)) %>%
+  separate(PHE, into = c("PHE", NA, "REP"), sep = c(-2,-1))
+
+pan_phe <- phenotypes %>%
+  #filter(PLANT_ID %in% pan_subset$PLANT_ID) %>%
+  filter(grepl("_A$", PHE) | grepl("_B$", PHE) | grepl("_C$", PHE)) %>%
+  filter(SITE %in% c("KBSM", "CLMB", "PKLE")) %>%
+  mutate(MEAS = case_when(MEAS == 105601 ~ 10,
+                   TRUE ~ MEAS)) %>%
+  separate(PHE, into = c("PHE", NA, "REP"), sep = c(-2,-1))
+```
+4X: 43 to 27
+Atlantic: 267 to 162
+Gulf: 228 to 128
+Midwest: 133 to 88
+
+60 Atlantic Coastal (55.55%)
+99 Atlantic Upland (66.9%)
+39 Gulf Coastal (46%)
+88 Gulf Lowland (66%)
+86 Midwest Upland (68.8%)
+
+vs 
+108 Atlantic Coastal
+148 Atlantic Upland
+85 Gulf Coastal
+133 Gulf Lowland
+125 Midwest Upland
+
+BLUPs for PAN_LEN, PRIM_BN, SEC_BN, SEC_LN
+PAN_LEN: length from first primary branch to tip of panicle
+PRIM_BN: # primary branches
+SEC_LN: length of first primary branch. This wasn't measured for four-way.
+SEC_BN: # secondary branches off the first primary branch.
+
+```{r}
+162/267
+128/228
+88/133
+27/43
+(27+88+128+162)/(267+228+133+43)
+39/85
+88/133
+86/125
+99/148
+60/108
+```
+Only ~60% of genotypes are present at all three gardens. Consistent across all three genetic subpopulations, at least.
+
+
+# ---------
+
+# BLUPs using PLANT_ID
+
+```{r}
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI")
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+h2_table <- tibble()
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+i = 1 ; k = 1
+phe <- pan_subset_phe %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET), by = "PLANT_ID") %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+
+
+for(i in seq_along(site_v)){ # may need to adjust h2_table line below 
+  for(k in seq_along(phe_v)){
+      phe_single <- phe %>%
+        filter(manu_site %in% site_v[[i]] & PHE %in% phe_v[[k]]) %>%
+        rename(phenotype = MEAS) %>%
+        mutate(PLANT_ID = as_factor(PLANT_ID),
+               SITE = as_factor(SITE),
+               PLOT_GL = as_factor(PLOT_GL)) %>%
+        as.data.frame()
+
+  tryCatch({
+  asr_out <- asreml(phenotype ~ 1,
+                     random = ~idv(PLANT_ID),
+                     residual = ~idv(units),
+                     data = phe_single, 
+                     workspace = "3gb")
+  
+  blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+    as_tibble(rownames = "Effect")
+  write_csv(blup, file.path(outputdir, paste0(prefix,
+                                              names(site_v)[i], "_",
+                                              phe_v[k], ".csv")))
+}, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+
+tryCatch({
+    save_plot(filename = file.path(outputdir, "ASReml_plots", paste0(prefix,
+                                                   "ASReml_performance_",
+                                                   names(site_v)[i], "_",
+                                                    phe_v[k], ".png")), 
+          plot = plot(asr_out))
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+
+    }
+  }
+```
+
+## Read in BLUP csv files
+
+```{r}
+phe_gwas <- tibble()
+
+    for(i in seq_along(site_v)){
+      for(k in seq_along(phe_v)){
+        phe_raw <- read_csv(file.path(outputdir,
+                                      paste0(prefix,
+                                              names(site_v)[i], "_",
+                                              phe_v[k], ".csv")))
+        names(phe_raw)[2] <- paste0(phe_v[k], "_", names(site_v)[i])
+        phe_proc <- phe_raw %>%
+          separate(Effect, into = c(NA, "PLANT_ID"), sep = 9) %>%
+          select(PLANT_ID, 2)
+        if(i == 1 & k == 1){
+          phe_gwas <- phe_proc
+        } else {
+          phe_gwas <- phe_gwas %>%
+            left_join(phe_proc, by = "PLANT_ID")
+        }
+      }
+    }
+  write_csv(phe_gwas, file = file.path(outputdir,
+                                       paste0(prefix, "BLUP_phenotypes",
+                                              ".csv")))
+```
+
+# ------------------------------
+# Plots using PLANT_ID BLUPS 
+
+
+## Trait histograms
+
+On both raw trait values and on PLANT_ID BLUPs (which should be normal, by definition).
+
+```{r}
+pan_phe$SUBPOP <- factor(pan_phe$SUBPOP, levels = c("Gulf", "Midwest", "Atlantic", "4X", "8X"))
+pan_phe %>%
+  filter(PLANT_ID != "AP13") %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_grid(vars(SUBPOP), vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of raw phenotypic measurements")
+
+save_plot(filename = file.path(outputdir, paste0("Trait_histograms.png")), 
+          plot = last_plot(), base_height = 6)
+
+phe_gwas %>%
+  pivot_longer(cols = PAN_LEN:SEC_LN, names_to = "PHE", values_to = "MEAS") %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_grid(vars(SUBPOP), vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of phenotypic BLUPs for GWAS")
+save_plot(filename = file.path(outputdir, paste0("Trait_PLANT_ID_BLUP_histograms.png")), 
+          plot = last_plot(), base_height = 6)
+
+pan_phe %>%
+  filter(PLANT_ID != "AP13") %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_wrap(vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of raw phenotypic measurements")
+
+save_plot(filename = file.path(outputdir, paste0("Trait_histograms_overall.png")), 
+          plot = last_plot(), base_height = 6)
+
+phe_gwas %>%
+  pivot_longer(cols = PAN_LEN:SEC_LN, names_to = "PHE", values_to = "MEAS") %>%
+  filter(!SUBPOP %in% c("NA", "8X") & !is.na(SUBPOP)) %>%
+  ggplot(aes(x = MEAS)) + 
+  geom_histogram() +
+  facet_wrap(vars(PHE), scales = "free_x") +
+  ggtitle("Histograms of phenotypic BLUPs for GWAS")
+save_plot(filename = file.path(outputdir, paste0("Trait_PLANT_ID_BLUP_histograms_overall.png")), 
+          plot = last_plot(), base_height = 6)
+```
+
+
+## Phenotypic correlations
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+phe <- pan_phe %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET), by = "PLANT_ID") %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+```
+
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+phe <- pan_subset_phe %>%
+  left_join(select(metadata, PLANT_ID, ECOTYPE_NNET), by = "PLANT_ID") %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+phe_gwas <- read_csv(file.path(outputdir,
+                                       paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+```
+
+
+```{r phenotypic correlation plotting function}
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+i = 4
+# Make a correlation plot for each subpop.
+for (i in seq_along(subpop_v)) {
+  cov_df <- phe_gwas %>% filter(SUBPOP %in% subpop_v[[i]])
+  cor_phe <- cor(cov_df[,-(1:3)], use = "pairwise")
+
+# Replace 1's on the diagonal with the coefficient of variation within each common garden.
+cov_sd <- matrixStats::colSds(as.matrix(cov_df[,4:ncol(cov_df)]), na.rm = TRUE)
+cov_mean <- matrixStats::colMeans2(as.matrix(cov_df[,4:ncol(cov_df)]), 
+                                   na.rm = TRUE)
+diag(cor_phe) <- cov_sd/cov_mean 
+
+# If the correlation matrix is symmetric, remove the upper left half for plotting.
+if(isSymmetric(cor_phe)){
+      for(m in 1:nrow(cor_phe)){
+        for(j in 1:ncol(cor_phe)){
+          if(m < j){
+            cor_phe[m, j] <- NA
+          }
+        }
+      }
+}
+
+# Put matrix in long format for ggplot.
+    U1 <- as_tibble(cor_phe, rownames = "rowU", .name_repair = "unique") %>%
+            pivot_longer(cols = -.data$rowU, names_to = "colU",
+                         values_to = "covar") %>%
+            filter(!is.na(.data$covar))
+    U1$colU <- factor(U1$colU, levels = colnames(cor_phe))
+    U1$rowU <- factor(U1$rowU, levels = colnames(cor_phe))
+
+    ggplot1 <- U1 %>%
+    ggplot(aes(x = .data$rowU, y = .data$colU)) +
+    switchgrassGWAS::theme_oeco +
+    geom_tile(aes(fill = .data$covar), na.rm = TRUE) +
+    scale_fill_gradientn(colors = c("#440154FF", "#3B528BFF", "#2C728EFF",
+                                  "white", "#27AD81FF", "#5DC863FF",
+                                  "#FDE725FF"),
+                         limits = c(-1, 1)) +
+    #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
+    # Add text labels for each tile with the covariance fraction
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          #axis.text = element_blank(), # optionally remove this text
+          axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.spacing.x = unit(-0, 'cm')) +
+    xlab("") + ylab("") + labs(title = "CVs (diagonal) and phenotypic correlations 
+                               for 2019 Panicle Traits at Three Gardens", subtitle = names(subpop_v)[i])
+
+save_plot(filename = file.path(outputdir, paste0(prefix, names(subpop_v)[i],
+                                                 "_subpop_",
+                                                 "phenotypic_correlations_",
+                                                 "and_within_condition",
+                                                 "_CVs.png")),
+          plot = ggplot1, base_height = length(colnames(cor_phe))*.3+1, 
+          base_asp = 1.1)
+}
+```
+
+```{r}
+pan_groups <- phe_gwas %>%
+  unite(GROUP, c(SUBPOP, ECOTYPE_NNET), sep = "_")
+group_v <- list(Atlantic_Upland = "Atlantic_Upland", Atlantic_Coastal = "Atlantic_Coastal", Gulf_Lowland = "Gulf_Lowland", Gulf_Coastal = "Gulf_Coastal", Midwest_Upland = "Midwest_Upland")
+
+for (i in seq_along(group_v)) {
+  cov_df <- pan_groups %>% filter(GROUP %in% group_v[[i]])
+  cor_phe <- cor(cov_df[,-(1:2)], use = "pairwise")
+
+# Replace 1's on the diagonal with the coefficient of variation within each common garden.
+cov_sd <- matrixStats::colSds(as.matrix(cov_df[,3:ncol(cov_df)]), na.rm = TRUE)
+cov_mean <- matrixStats::colMeans2(as.matrix(cov_df[,3:ncol(cov_df)]), 
+                                   na.rm = TRUE)
+diag(cor_phe) <- cov_sd/cov_mean 
+
+# If the correlation matrix is symmetric, remove the upper left half for plotting.
+if(isSymmetric(cor_phe)){
+      for(m in 1:nrow(cor_phe)){
+        for(j in 1:ncol(cor_phe)){
+          if(m < j){
+            cor_phe[m, j] <- NA
+          }
+        }
+      }
+}
+
+# Put matrix in long format for ggplot.
+    U1 <- as_tibble(cor_phe, rownames = "rowU", .name_repair = "unique") %>%
+            pivot_longer(cols = -.data$rowU, names_to = "colU",
+                         values_to = "covar") %>%
+            filter(!is.na(.data$covar))
+    U1$colU <- factor(U1$colU, levels = colnames(cor_phe))
+    U1$rowU <- factor(U1$rowU, levels = colnames(cor_phe))
+
+    ggplot1 <- U1 %>%
+    ggplot(aes(x = .data$rowU, y = .data$colU)) +
+    switchgrassGWAS::theme_oeco +
+    geom_tile(aes(fill = .data$covar), na.rm = TRUE) +
+    scale_fill_gradientn(colors = c("#440154FF", "#3B528BFF", "#2C728EFF",
+                                  "white", "#27AD81FF", "#5DC863FF",
+                                  "#FDE725FF"),
+                         limits = c(-1, 1)) +
+    #geom_text(aes(label = round(.data$covar, 1)), color = "darkgrey") +
+    # Add text labels for each tile with the covariance fraction
+    theme(legend.position = "right",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          #axis.text = element_blank(), # optionally remove this text
+          axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.spacing.x = unit(-0, 'cm')) +
+    xlab("") + ylab("") + labs(title = "CVs (diagonal) and phenotypic correlations 
+                               for 2019 Panicle Traits", subtitle = names(group_v)[i])
+
+save_plot(filename = file.path(outputdir, paste0(prefix, names(group_v)[i],
+                                                 "_subpop_",
+                                                 "phenotypic_correlations_",
+                                                 "and_within_condition",
+                                                 "_CVs.png")),
+          plot = ggplot1, base_height = length(colnames(cor_phe))*.3+1, 
+          base_asp = 1.1)
+}
+```
+
+## Reaction norms
+
+Do on the subset of 408 present at all three gardens, clearly.
+
+```{r}
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019")
+# phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+```
+
+
+### RN on PLANT_ID subset of 408
+```{r PLANT_ID subset present at all three gardens}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(file.path(outputdir,
+                               paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything()) %>%
+  pivot_longer(cols = 4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(SITE = case_when(grepl("TX2", PHE_SITE) ~ "TX2",
+                          grepl("MO", PHE_SITE) ~ "MO",
+                          grepl("MI", PHE_SITE) ~ "MI"),
+         PHE = case_when(grepl("PAN_LEN", PHE_SITE) ~ "PAN_LEN",
+                         grepl("PRIM_BN", PHE_SITE) ~ "PRIM_BN",
+                         grepl("SEC_BN", PHE_SITE) ~ "SEC_BN",
+                         grepl("SEC_LN", PHE_SITE) ~ "SEC_LN")) %>%
+  select(-PHE_SITE) %>%
+  pivot_wider(names_from = "PHE", values_from = "MEAS")
+
+phe_gwas$SUBPOP <- factor(phe_gwas$SUBPOP, levels = c("Gulf", "Midwest", "Atlantic", "4X", "8X"))
+phe_gwas$SITE <- factor(phe_gwas$SITE, levels = c("TX2", "MO", "MI"))
+```
+
+```{r}
+phe_gwas %>%
+  #filter(ECOTYPE_NNET != "Unknown") %>%
+  ggplot(aes(x = SITE, y = PAN_LEN)) +
+  geom_point(aes(color = PLANT_ID)) +
+  geom_line(aes(color = PLANT_ID, group = PLANT_ID), alpha = 0.6) +
+  theme(legend.position = "none") +
+  facet_grid(vars(ECOTYPE_NNET), vars(SUBPOP), scales = "free_y") +
+  #geom_smooth(aes(group = ECOTYPE_NNET, color = ECOTYPE_NNET)) +
+  scale_color_viridis_d(end = 0.9)
+save_plot(filename = file.path(outputdir, paste0("Reaction_Norms_for_", "PAN_LEN",
+                                                 "_by_Subpop_and_Ecotype.png")), 
+          plot = last_plot(), base_height = 6)
+```
+
+# -----------------------------------
+# Heritabilities of PLANT_ID BLUPs 
+trait ~ (kinship)
+
+## 1A. Setup on server
+
+```{r server setup}
+library(tidyverse)
+library(asreml)
+library(switchgrassGWAS)
+library(cowplot)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+
+#prefix = "pvdiv_panicles_2019_"
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019")
+phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+sites <- readRDS(file.path(datadir, "sites.rds"))
+color_code <- readRDS(file.path(datadir, "color_code.rds"))
+subpops <- readRDS(file.path(datadir, "subpops.rds"))
+color_code2 <- c("grey", "#090906", "#6E91CB", "#F47F72", "#442C83")
+
+k_full <- read_rds(file.path("~", "Github", "pvdiv-genome", "tensite_twoyear",
+                             "Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds"))
+```
+
+## 2A. PLANT_ID subset of 408
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+phe <- pan_subset_phe
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+phe <- pan_phe
+```
+
+## 3 ASReml loop
+
+```{r asreml loop}
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI", 
+               three_sites = c("TX2", "MO", "MI"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+
+h2_table <- tibble()
+
+i = 1 ; j = 1; k = 1
+
+for(i in seq_along(site_v)){ # may need to adjust h2_table line below 
+  for(j in seq_along(subpop_v)){
+    for(k in seq_along(phe_v)){
+      phe_single <- phe %>%
+        filter(manu_site %in% site_v[[i]] & SUBPOP %in% subpop_v[[j]] & PHE %in% phe_v[[k]]) %>%
+        rename(phenotype = MEAS) %>%
+        mutate(PLANT_ID = as_factor(PLANT_ID),
+               SITE = as_factor(SITE)) %>%
+        as.data.frame()
+
+if(length(site_v[[i]]) > 1){  # need to add site as a random factor if 
+  # there is more than one site included in the dataset.
+  tryCatch({
+   asr_out <- asreml(phenotype ~ 1,
+                     random = ~vm(PLANT_ID, k_full) +
+                       ~idv(SITE),
+                     residual = ~idv(units),
+                     data = phe_single, 
+                     workspace = "3gb")
+
+  h2_est <- vpredict(asr_out, h2 ~ V2/(V1+V2+V3)) %>% as_tibble() %>%
+    mutate(site = names(site_v)[i],
+           subpop = names(subpop_v)[j],
+           phe = phe_v[[k]],
+           bic = summary(asr_out)$bic[1],
+           loglik = summary(asr_out)$loglik)
+  }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+} else {
+  tryCatch({
+  asr_out <- asreml(phenotype ~ 1,
+                     random = ~vm(PLANT_ID, k_full),
+                     residual = ~idv(units), # may adjust this for vi data
+                     data = phe_single, 
+                     workspace = "3gb")
+  
+  h2_est <- vpredict(asr_out, h2 ~ V1/(V1+V2)) %>% as_tibble() %>%
+    mutate(site = names(site_v)[i],
+           subpop = names(subpop_v)[j],
+           phe = phe_v[[k]],
+           bic = summary(asr_out)$bic[1],
+           loglik = summary(asr_out)$loglik
+           )
+#  blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+#    as_tibble(rownames = "Effect")
+#  write_csv(blup, file.path(outputdir, paste0(prefix, "blups_",
+#                                              names(site_v)[i], "_",
+#                                              names(subpop_v)[j], "_",,
+#                                              "_", phe_v[k], ".csv")))
+}, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+if(i == 1 & j == 1 & k == 1){
+  h2_table <- h2_est
+} else {
+  h2_table <- add_row(h2_table, h2_est)
+}
+    }
+  }
+}
+write_csv(h2_table, file.path(outputdir, paste0(prefix, "h2_df_no_GxE.csv")))
+
+```
+
+
+### Plot heritabilities from table
+
+```{r}
+h2_table <- read_csv(file.path(outputdir, paste0(prefix, "h2_df_no_GxE.csv")))
+
+h2_table
+
+pan_mean <- phe %>%
+  group_by(SUBPOP, manu_site, PHE) %>%
+  summarise(Mean_PHE = mean(MEAS),
+            SD_PHE = sd(MEAS, na.rm = TRUE),
+            n_PHE = n(),
+            TwoSE_PHE = 2*sd(MEAS, na.rm = TRUE)/sqrt(n())) %>%
+  filter(!is.na(SUBPOP)) %>%
+  rename(site = manu_site, subpop = SUBPOP, phe = PHE)
+
+ggh2 <- h2_table %>% 
+  left_join(pan_mean) %>%
+  mutate(subpop_name = case_when(subpop == "three_subpops" ~ "All",
+                                 TRUE ~ subpop),
+         site_name = case_when(site == "three_sites" ~ "All",
+                                 TRUE ~ site))
+ggh2$subpop_name <- factor(ggh2$subpop_name, levels = c("Gulf", "Midwest", "Atlantic", "All"))
+ggh2$site_name <- factor(ggh2$site_name, levels = c("TX2", "MO", "MI", "All"))
+```
+
+```{r}
+ggh2 %>% group_by(site) %>% tally()
+ggh2 %>%
+  ggplot(aes(x = site_name, y = Estimate)) +
+  geom_bar(aes(fill = site == "three_sites"), stat = "identity") +
+  geom_errorbar(aes(ymin = Estimate - SE, 
+                    ymax = Estimate + SE), width = 0.3) +
+  geom_linerange(aes(ymin = Estimate, ymax = Estimate + SE)) +
+  geom_hline(yintercept = 0.2, linetype = 2) +
+  facet_grid(vars(subpop_name), vars(phe)) +
+  theme(panel.spacing.x = unit(0.1, 'cm'), 
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none") + 
+  ylim(c(0, 1)) + labs(x = "Site", y = bquote('h'^2)) +
+  scale_fill_viridis_d(end = 0.8, direction = 1)
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_by_Site_and_Subpop.png")), plot = last_plot(), base_height = 5)
+
+ggh2 %>%
+  filter(SE < 0.4) %>%
+  ggplot(aes(x = Mean_PHE, y = Estimate)) +
+  geom_point(aes(color = subpop, shape = site)) +
+  geom_errorbar(aes(ymin = Estimate - SE*2, 
+                    ymax = Estimate + SE*2,
+                    color = subpop)) +
+  geom_errorbarh(aes(xmin = Mean_PHE - TwoSE_PHE,
+                     xmax = Mean_PHE + TwoSE_PHE,
+                     color = subpop)) +
+  facet_wrap(vars(phe), scales = "free") +
+  geom_smooth(method = lm) + 
+  geom_hline(yintercept = c(0, 0.5, 1), linetype = 2) +
+  scale_color_manual(values = c("#6E91CB", "#F47F72", "#442C83", "grey")) + 
+  scale_shape_manual(values = c(15, 16, 3, 17)) +
+  labs(x = "Mean Subpop Panicle Phenotype", y = bquote('h'^2)) +
+  theme(legend.position = "right")
+save_plot(filename = file.path(outputdir, paste0(prefix, "Panicle_Phenotypes_Heritabilities_against_Mean_Panicle_Phenotype.png")), 
+          plot = last_plot(), base_height = 4)
+```
+
+# -----------------------------------
+# GxE 
+trait ~ (kinship*garden)
+
+
+## 1A. Setup on server
+
+```{r server setup}
+library(tidyverse)
+library(asreml)
+library(switchgrassGWAS)
+library(cowplot)
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+
+#prefix = "pvdiv_panicles_2019_"
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019", "GxE")
+phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+sites <- readRDS(file.path(datadir, "sites.rds"))
+color_code <- readRDS(file.path(datadir, "color_code.rds"))
+subpops <- readRDS(file.path(datadir, "subpops.rds"))
+color_code2 <- c("grey", "#090906", "#6E91CB", "#F47F72", "#442C83")
+
+k_full <- read_rds(file.path("~", "Github", "pvdiv-genome", "tensite_twoyear",
+                             "Kinship_van_Raden_630_individuals_SNPs_r2_20percent.rds"))
+```
+
+Also need to run the code chunk starting on line 62: Subset to individuals
+
+## 2A. PLANT_ID subset of 408
+
+```{r}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+phe <- pan_subset_phe
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+phe <- pan_phe
+```
+
+```{r}
+site_v <- list(TX2 = "TX2", MO = "MO",  MI = "MI", 
+               three_sites = c("TX2", "MO", "MI"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+subpop_v <- list(Gulf = "Gulf", Midwest = "Midwest", Atlantic = "Atlantic", 
+                 three_subpops = c("Atlantic", "Gulf", "Midwest"))
+
+h2_table <- tibble()
+gxe_table <- tibble()
+  
+  for(i in 4){ # may need to adjust below for h2_table #  seq_along(site_v)
+    dir.create(file.path(outputdir, names(site_v)[i]), showWarnings = FALSE)
+    for(j in seq_along(subpop_v)){
+      for(k in seq_along(phe_v)){
+        phe_single <- phe %>%
+        filter(manu_site %in% site_v[[i]] & SUBPOP %in% subpop_v[[j]] & PHE %in% phe_v[k]) %>%
+        rename(phenotype = MEAS) %>%
+        mutate(PLANT_ID = as_factor(PLANT_ID),
+               SITE = as_factor(SITE)) %>%
+        as.data.frame()
+  
+  if(length(site_v[[i]]) > 1){  # need to add site as a random factor if 
+    # there is more than one site included in the dataset.
+    tryCatch({
+     asr_out <- asreml(phenotype ~ 1,
+                       random = ~idv(SITE)*vm(PLANT_ID, k_full),
+                       residual = ~idv(units),
+                       data = phe_single, 
+                       workspace = "3gb")
+  
+    Env_est <- vpredict(asr_out, E ~ V1/(V1+V2+V3+V4))
+    GxE_est <- vpredict(asr_out, GxE_h2 ~ V3/(V1+V2+V3+V4))
+    err_est <- vpredict(asr_out, err ~ V4/(V1+V2+V3+V4))
+    h2_est <- vpredict(asr_out, G_h2 ~ V2/(V1+V2+V3+V4)) %>% as_tibble() %>%
+      mutate(site = names(site_v)[i],
+             subpop = names(subpop_v)[j],
+             phe = phe_v[k],
+             bic = summary(asr_out)$bic[1],
+             loglik = summary(asr_out)$loglik,
+             Env_Estimate = Env_est$Estimate[1],
+             Env_SE = Env_est$SE[1],
+             GxE_Estimate = GxE_est$Estimate[1],
+             GxE_SE = GxE_est$SE[1],
+             error_Estimate = err_est$Estimate[1],
+             error_SE = err_est$SE[1])
+    
+    blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+    as_tibble(rownames = "Effect")
+    write_csv(blup, file.path(outputdir, names(site_v)[i], 
+                              paste0(prefix, "GxE_blups_", names(site_v)[i], "_",
+                                     names(subpop_v)[j], "_", phe_v[k],
+                                     ".csv")))
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+  } else {
+    tryCatch({
+    asr_out <- asreml(phenotype ~ 1,
+                       random = ~vm(PLANT_ID, k_full),
+                       residual = ~idv(units),
+                       data = phe_single, 
+                       workspace = "3gb")
+    
+    h2_est <- vpredict(asr_out, h2 ~ V1/(V1+V2)) %>% as_tibble() %>%
+      mutate(site = names(site_v)[i],
+             subpop = names(subpop_v)[j],
+             phe = phe_v[k],
+             bic = summary(asr_out)$bic[1],
+             loglik = summary(asr_out)$loglik)
+    blup <- summary(asr_out, coef=TRUE)$coef.random %>% 
+    as_tibble(rownames = "Effect")
+    write_csv(blup, file.path(outputdir, names(site_v)[i],
+                              paste0(prefix, "GxE_blups_", names(site_v)[i], "_",
+                                     names(subpop_v)[j], "_", phe_v[k],
+                                     ".csv")))
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+  }
+  
+  if(i == 1 & j == 1 & k == 1){
+    h2_table <- h2_est
+  } else if(i == 4 & j == 1 & k == 1){
+    gxe_table <- h2_est
+  } else if(length(site_v[[i]]) > 1){
+    gxe_table <- add_row(gxe_table, h2_est)
+  } else {
+    h2_table <- add_row(h2_table, h2_est)
+  }
+  tryCatch({
+      save_plot(filename=file.path(outputdir, names(site_v)[i],
+                                   paste0(prefix, "ASReml_performance_",
+                                                 names(site_v)[i], "_",
+                                                 names(subpop_v)[j],
+                                                 "_", phe_v[k], ".png")), 
+            plot = plot(asr_out))
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+  
+      }
+    }
+  }
+  #write_csv(h2_table, file.path(outputdir, paste0(prefix, "GxE_blups_h2_df.csv")))
+  write_csv(gxe_table, file.path(outputdir, paste0("gxe_and_h2_df_", 
+                                                   "GxE_blups.csv")))
+```
+
+
+```{r}
+gxe_table <- read_csv(file.path(outputdir, paste0("gxe_and_h2_df_", 
+                                                   "GxE_blups.csv")))
+
+gxe_barplot2 <- gxe_table %>%
+  select(site:loglik, ends_with("SE")) %>%
+  pivot_longer(cols = ends_with("SE"), names_to = "Type", values_to = "SE") %>%
+  mutate(type_name = case_when(Type == "SE" ~ "G",
+                               Type == "GxE_SE" ~ "GxE",
+                               Type == "error_SE" ~ "error",
+                               Type == "Env_SE" ~ "E")) %>%
+  select(-Type)
+gxe_barplot <- gxe_table %>%
+  select(site:loglik, ends_with("Estimate")) %>%
+  pivot_longer(cols = ends_with("Estimate"), names_to = "Type", values_to = "Estimate") %>%
+  mutate(type_name = case_when(Type == "Estimate" ~ "G",
+                               Type == "GxE_Estimate" ~ "GxE",
+                               Type == "error_Estimate" ~ "error",
+                               Type == "Env_Estimate" ~ "E"))
+gxe_barplot <- gxe_barplot %>%
+  left_join(gxe_barplot2)
+gxe_barplot$type_name <- factor(gxe_barplot$type_name, levels = rev(c("G", "GxE", "E", "error")))
+gxe_barplot <- gxe_barplot %>%
+  arrange(site, subpop, phe, desc(type_name)) %>%
+  group_by(site, subpop, phe) %>%
+  mutate(Estimate_cum = cumsum(Estimate))
+```
+
+```{r}
+bar_gxe <- gxe_barplot %>%
+  ggplot(aes(x = phe, y = Estimate)) +
+  geom_bar(stat = "identity", aes(fill = type_name)) + 
+  geom_errorbar(aes(ymin = Estimate_cum - SE, ymax = Estimate_cum+ SE), width = 0.3) + facet_grid(site ~ subpop) +
+  scale_fill_viridis_d(direction = -1) +
+  theme(panel.spacing.x = unit(0.1, 'cm'), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), legend.position = "right") + ylim(c(0,1.01))
+  
+save_plot(file.path(outputdir, paste0(prefix, "Var_Components.png")),
+          plot = bar_gxe, base_height = 4)
+```
+
+# ----------------------------------
+# GWAS 
+Using PLANT_ID BLUPs
+
+
+```{r}
+library(snpdiver)
+devtools::load_all()
+
+library(tidyverse)
+library(bigsnpr)
+
+
+workingdir <- file.path("~", "Github", "pvdiv-phenotypes")
+datadir <- file.path(workingdir, "data")
+outputdir <- file.path(workingdir, "analysis", "pvdiv_panicles_2019")
+# phenotypes <- read_rds(file.path(datadir, "Phenotypes_cleaned.rds"))
+metadata <- readRDS(file.path(datadir, "metadata.rds"))
+phe_v <- c("PAN_LEN", "PRIM_BN", "SEC_BN", "SEC_LN")
+
+```
+
+
+## 2A. PLANT_ID subset of 408
+```{r PLANT_ID subset present at all three gardens}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(file.path(outputdir,
+                               paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+```
+
+## 2B. All PLANT_IDs
+
+```{r all PLANT_IDs}
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_"
+
+phe_gwas <- read_csv(file.path(outputdir,
+                               paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+```
+
+```{r}
+G <- pavir_snp$genotypes
+markers <- tibble(CHR = pavir_snp$map$chromosome, 
+                  POS = pavir_snp$map$physical.pos,
+                  marker.ID = pavir_snp$map$marker.ID) %>%
+    mutate(CHRN = as.numeric(as.factor(.data$CHR)),
+           CHR = as.factor(.data$CHR))
+svd <- snp_autoSVD(G = G, infos.chr = markers$CHRN, infos.pos = markers$POS,
+                   k = 10, thr.r2 = 0.2)
+saveRDS(svd, file = file.path(outputdir1, paste0(suffix, "_svd.rds")))
+```
+
+
+```{r}
+inputfiles <- read_delim(file.path(workingdir, "analysis", 
+                                   "inputkinship.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") # M&G, M, G
+subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), 
+                  Midwest = "Midwest", 
+                  Gulf = "Gulf", Atlantic = "Atlantic", 
+                  Atlantic_and_Midwest = c("Atlantic", "Midwest"),
+                  Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
+                  All = c("Atlantic", "Gulf", "Midwest", "4X"))
+# k = 3
+
+ for(k in c(7)){   # or c(7,2,3,4)  # or seq_along(subpop_v2)
+  pavir_pan <- phe_gwas %>%
+    ungroup() %>%
+    filter(SUBPOP %in% subpop_v2[[k]]) %>%
+    select(-ECOTYPE_NNET, -SUBPOP) %>%
+    rename(sample.ID = PLANT_ID)
+  suffix = paste0(prefix, names(subpop_v2)[k])
+  pavir_snp <- snp_attach(inputfiles$SNPfiles[k])
+
+    tryCatch({
+      pan_pavir <- dive_phe2effects(df = pavir_pan, snp = pavir_snp, 
+                                    type = "linear", suffix = suffix, 
+                                    outputdir = outputdir, min.phe = 110)
+      }, error = function(e){cat("ERROR :",conditionMessage(e), "\n")})
+ }
+  
+```
+
+## 3. mashr
+
+### if doing effects2mash
+
+But, it seems like the metadata didn't save due to some error. So I think I should just run phe2mash instead.
+```{r}
+metadata_all <- read_csv(file.path(outputdir, paste0(prefix, "All_assocated_metadata.csv")))
+
+effects_all <- big_attach(file.path(outputdir, paste0("gwas_effects_", prefix, "All.rds")))
+```
+
+```{r}
+inputfiles <- read_delim(file.path(workingdir, "analysis", 
+                                   "inputkinship.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") # M&G, M, G
+subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
+                  Gulf = "Gulf", Atlantic = "Atlantic", 
+                  Atlantic_and_Midwest = c("Atlantic", "Midwest"),
+                  Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
+                  All = c("Atlantic", "Gulf", "Midwest", "4X"))
+
+k = 7
+pavir_pan <- phe_gwas %>%
+  ungroup() %>%
+  filter(SUBPOP %in% subpop_v2[[k]]) %>%
+  select(-ECOTYPE_NNET, -SUBPOP) %>%
+  rename(sample.ID = PLANT_ID)
+suffix = paste0(prefix, names(subpop_v2)[k])
+pavir_snp <- snp_attach(inputfiles$SNPfiles[k])
+outputdir1 = file.path(outputdir, "phe2mash")
+pavir_svd <- readRDS(file = file.path(outputdir1, paste0(suffix, "_svd.rds")))
+
+m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
+                       save.plots = FALSE,
+                      type = "linear", suffix = suffix, 
+                      outputdir = outputdir1, num.strong = 5000)
+
+
+?dive_phe2mash
+```
+
+# -------------------
+# Mash / QTL overlaps
+
+Ran mash on a genotypic subset of 381g for four panicle traits at three gardens. 
+
+To compare mash results & QTL overlaps:
+
+    - because the mash results are from 18.7M SNPs using snpdiver, I want to clump the mash results (using `snp_clumping`) and only look at the most significant SNP by log10BayesFactor in each LD block.
+    - Use a hypergeometric test to look for enrichment of mash significant SNPs within QTL regions
+    - Use hypergeometric tests and permutation of "QTL" regions of the same size, 1000x, to determine if this enrichment is higher than expected for random genomic regions of the same size.
+  
+```{r m2 is on popgen}
+m2 <- readRDS(file = file.path(outputdir1, paste0("Full_mash_model_",
+                                                 "5000", "_SNPs_U_ed_and_",
+                                                 "10000", "_SNPs_mash_fit_",
+                                                 suffix, ".rds")))
+# All genotypes
+m2 <- readRDS(file = file.path(outputdir1, paste0("Full_mash_model_",
+                                                 "5000", "_SNPs_U_ed_and_",
+                                                 "50000", "_SNPs_mash_fit_",
+                                                 suffix, ".rds")))
+```
+
+ ## mash result visualization for geno subset 
+
+Also, create a clumped dataframe from the full mash object. This way I can only look at the most significant SNP by log10BayesFactor in each LD block in the enrichment test.
+```{r mash result m2 is on server}
+length(get_significant_results(m2))   #  24897/18704908
+
+manhattan <- mash_plot_manhattan_by_condition(m2, snp = pavir_snp, 
+                                              saveoutput = TRUE)
+save_plot(filename = file.path(outputdir1, paste0("Manhattan", suffix, ".png")), plot = manhattan$ggmanobject, base_asp = 2.4, base_height = 3.75)
+sig_manh <- filter(manhattan$ggman_df, Num_Sig_Conditions > 0)
+write_csv(sig_manh, file = file.path(outputdir1, paste0("SNPs_sig_in_1_plus_condition", suffix, ".csv"))
+
+mash_plot_covar(m2, saveoutput = TRUE, suffix = suffix)
+
+manhattan <- mash_plot_manhattan_by_condition(m2, snp = pavir_snp, 
+                                              saveoutput = TRUE)
+mash_clumps <- snp_clumping(pavir_snp$genotypes, 
+                            infos.chr = markers$CHRN, thr.r2 = 0.2, 
+                            infos.pos = markers$POS, 
+                            S = manhattan$ggman_df$log10BayesFactor)
+mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
+write_csv(mash_df_clumped, file = file.path(outputdir1,
+                                            paste0("Clumped_mash_output_df",
+                                                   suffix, ".csv")))
+
+```
+56.2% of the mass is on the covariance matrix of equal effects (43.7% on no effects; 0.07% on ED_PCA_3). A good enough reason for me to not look at GxE. Man. Well, I mean, at most, there is a lot of differential sensitivity.
+
+Could I do get_GxE on the mash clumps? The clumping takes so long, is there a way to do it only once and use it to subset the remaining functions? So if an optional m_clumped is included, these functions just look at those SNPs; otherwise they look at all SNPs? That might be a good way to do this, rather than doing the thresholding of r^2 each time.
+
+
+## QTL enrichment function
+```{r get QTL enrichment function}
+
+get_QTL_enrichment <- function(m_clumped, qtl_df, quantile = 0.95, thr.BF = NA){
+
+  if(is.na(thr.BF)) {
+  thr.BF <- quantile(m_clumped$log10BayesFactor, quantile)
+  }
+  m_df <- m_clumped %>%
+  filter(log10BayesFactor > thr.BF) %>%
+  dplyr::select(CHR:POS, log10BayesFactor, everything())
+  
+  for(i in 1:nrow(qtl_df)){  # from 1 to 16
+  ## In block & > 2
+  QTLandBF <- m_df %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>% 
+    tally()
+  ## BF>2
+  inBF <- m_df %>%
+    tally()
+  ## BF not > 2 (all minus BF > 2, all is below)
+  allwrtBF <- m_clumped %>%
+    tally()
+  ## All in block
+  inQTL <- m_clumped %>%
+    filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                             qtl_df$POS_hi[i])) %>%
+    tally()
+  notinBF <- (allwrtBF$n[1]-inBF$n[1])
+  pval <- phyper(QTLandBF$n[1], inBF$n[1], allwrtBF$n[1]-inBF$n[1], 
+                 inQTL$n[1], lower.tail = FALSE)
+  
+  if(i == 1){
+  outputdf <- tibble(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i], inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+  } else {
+    outputdf <- outputdf %>%
+      add_row(Chr = qtl_df$CHR[i], Pos_lo = qtl_df$POS_lo[i], Pos_hi = qtl_df$POS_hi[i],inQTLandBF = QTLandBF$n[1], inBF = inBF$n[1], notinBF = notinBF, inQTL = inQTL$n[1], pvalue = pval)
+    }
+  }
+  return(outputdf)
+}
+
+```
+
+## load datasets for QTL enrichment function 
+```{r}
+qtldf <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/Fourway_panicle_QTL_10gardens.csv")
+
+qtl_df <- qtldf %>% 
+  separate(`Left flanking marker`, into = c("CHR", "PosL"), sep = "_", 
+           convert = TRUE) %>%
+  separate(`Right flanking_marker`, into = c("ChrR", "PosR"), sep = "_", 
+           convert = TRUE) %>%
+  mutate(POS_lo = PosL*1000000,
+         POS_hi = PosR*1000000) %>%
+  arrange(MARKER)
+
+m_clumped <- read_csv("~/Github/pvdiv-phenotypes/analysis/pvdiv_panicles_2019/phe2mash/Clumped_mash_output_df_pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_All.csv")
+```
+ 
+### Test function on loaded datasets
+```{r}
+get_QTL_enrichment(m_clumped, qtl_df, thr.BF = 1.3) %>%
+  write_csv(file = file.path(outputdir1, paste0("mash_QTL_enrichments_",
+                                                suffix, ".csv")))
+get_QTL_enrichment(m_clumped, qtl_df, quantile = 0.99)
+
+m_clumped %>% 
+  filter(Num_Sig_Conditions > 0) %>%
+  arrange(log10BayesFactor)
+m_clumped %>% 
+  filter(log10BayesFactor > 1.30)
+-log10(0.05)
+
+8318/2700593
+m_clumped %>% 
+  filter(log10BayesFactor > 1.30) %>%
+  group_by(Num_Sig_Conditions) %>%
+  tally()
+8110/8318
+```
+
+
+## Permutation of enrichment test
+```{r}
+sig_random <- c()
+chr_size_mash <- m_clumped %>%
+  ungroup() %>%
+  group_by(CHR) %>%
+  dplyr::summarise(Pos_lo = min(POS),
+                   Pos_hi = max(POS))
+qtl_size <- qtl_df %>%
+  select(CHR, POS_lo, POS_hi) %>%
+  unique() %>%   # don't doublecount completely overlapping QTL
+  #(does doublecount partially overlapping QTL, however.)
+  group_by(CHR, POS_lo) %>%
+  dplyr::mutate(Size = POS_hi - POS_lo) %>%
+  dplyr::select(CHR, POS_lo, Size)
+
+for(j in 1:1000){
+  rchr <- chr_size_mash$CHR[sample(1:18, nrow(qtl_size), replace = TRUE)]
+  rposlo <- c()
+  for(i in 1:length(rchr)){
+    rposlo[i] <- sample(chr_size_mash$Pos_lo[which(chr_size_mash$CHR == rchr[i])]:chr_size_mash$Pos_hi[which(chr_size_mash$CHR == rchr[i])], 1)
+  }
+
+  random_qtl <- tibble(CHR = rchr, POS_lo = rposlo, Size = qtl_size$Size) %>%
+    mutate(POS_hi = POS_lo + Size) %>%
+    arrange(CHR, POS_lo)
+
+  random_df <- get_QTL_enrichment(m_clumped, qtl_df = random_qtl, 
+                                   thr.BF = 1.3)
+  
+  sig_random[j] <- nrow(filter(random_df, pvalue < 0.05))
+}
+```
+
+### Plot histogram of enrichments of random QTL intervals
+```{r}
+saveRDS(sig_random, file = file.path(outputdir1, paste0("1000_Random_QTL_df_significant_enrichments_of_mash_BF_gt1.3", suffix, ".rds")))
+get_QTL_enrichment(m_clumped, qtl_df, thr.BF = 1.3) %>%
+  filter(pvalue < 0.05)
+
+tibble(`mash significant enrichments` = sig_random) %>%
+  arrange(desc(`mash significant enrichments`)) %>%
+  ggplot(aes(x = `mash significant enrichments`)) +
+  switchgrassGWAS::theme_oeco +
+  geom_histogram(binwidth = 1) + 
+  xlim(c(1, 18)) + ylab("") +
+  geom_vline(xintercept = 6, linetype = 2, color = "red")
+save_plot(filename = file.path(outputdir1, paste0("Histogram_of_random_QTL_mash_enrichments_BF_gt1.3_1000runs", suffix, ".png")),  plot = last_plot(), base_height = 1.8, base_asp = 1.6)
+
+46/1000
+9/1000
+```
+
+## Find explained variance per SNP
+
+```{r}
+ind_row <- which(plants %in% phe_gwas$PLANT_ID)
+
+m_clump_maf <- snp_MAF(pavir_snp$genotypes, ind.col = mash_clumps, 
+                       ind.row = ind_row)
+
+Means <- get_pm(m2)
+Means_clump <- Means[mash_clumps,]
+colnames(Means_clump) <- paste0(colnames(Means_clump), "_Effect_Mean")
+
+mash_df_clumped <- mash_df_clumped %>%
+  add_column(maf = m_clump_maf)
+mash_df_effects <- tibble(cbind(mash_df_clumped, Means_clump))
+
+mash_df_expvar <- mash_df_effects %>%
+  pivot_longer(cols = matches("_Mean"), names_to = "PHE", values_to = "Effect") %>%
+  mutate(Explained_variance = 2*maf*(1-maf)*Effect^2,
+         PHE = str_replace(PHE, "_Effect_Mean", "_Explained_Variance")) %>%
+  select(-Effect) %>%
+  pivot_wider(names_from = PHE, values_from = Explained_variance, values_fn = mean)
+
+write_csv(mash_df_effects, file = file.path(outputdir, paste0("Clumped_SNPs_Mean_Effects", suffix, ".csv")))
+write_csv(mash_df_expvar, file = file.path(outputdir, paste0("Clumped_SNPs_Variance_Explained", suffix, ".csv")))
+
+```
+
+```{r}
+mash_df_expvar %>%
+  select(-CHRN) %>%
+  filter(Num_Sig_Conditions > 0) %>%
+  pivot_longer(cols = matches("Explained_Variance"), 
+               names_to = "PHE", values_to = "Exp_Var") %>%
+  arrange(desc(Exp_Var)) %>%
+  #filter(Exp_Var > 0.005) %>%
+  write_csv(file.path(outputdir1, paste0("Significant_SNPs_with_largest_Variance_Explained", suffix, ".csv")))
+
+qtl_df
+
+colSums(filter(mash_df_expvar, Num_Sig_Conditions > 0)[,8:19]) # ~12x 
+```
+
+
+
+# -------------------
+# Mash annotations
+
+```{r}
+BiocManager::install("AnnotationDbi")
+BiocManager::install("GenomicFeatures")
+BiocManager::install("VariantAnnotation")
+```
+
+### Rice/thaliana functional validation
+
+os_annos: OsGene and AtGene columns of this df indicate if the gene has a homolog in rice or A. thaliana with a functional study. Key is the locusName column.
+```{r}
+source("~/Github/Functions_ggplot-theme-adjustments_2018-01-03.R")
+annodir <- file.path("~", "Github", "pvdiv-phenology-gxe")
+ftanno <- read_csv(file.path(annodir, "data/Pvirgatum_v5.1.annotation_FTGeneHomologs.csv"))
+osgenekey <- read_delim(file.path(annodir, "data", "OsGene_keyword_table.txt"),
+                    delim = "\t")
+
+osgene_keyword_df <- osgenekey %>%
+  dplyr::select(-RAPdb, -MSU) %>%
+  group_by(Symbol, Keyword) %>%
+  dplyr::slice(1) %>%
+  pivot_wider(names_from = Keyword, values_from = Title)
+
+osgene_key <- osgene_keyword_df %>%
+  dplyr::select(Symbol, `senescence`, `grain`, `panicle`, `spikelet`, `grain length`, `grain number`, `grains per panicle`, `grain size`, `grain yield`, architecture, `inflorescence architecture`, `spikelet number`, branching, `panicle architecture`, `panicle size`, `spikelets per panicle`, `internode elongation`, `panicle length`, everything())
+
+os_annos <- ftanno %>%
+  filter(OsGene %in% osgene_key$Symbol | !is.na(AtGene)) %>%
+  mutate(Pos_Mb = round(start/10000)/100,
+         #Pos_Mb_e = floor(start/10000)/100,
+         POS_bin = round(Pos_Mb*100/2)) %>%# ,
+         #POS_bin_hi = round(Pos_Mb_e*100/2))
+  dplyr::select(OsGene, AtGene, locusName, everything()) %>%
+  dplyr::rename(`Gene ID` = locusName)
+```
+
+
+```{r}
+library(switchgrassGWAS)
+library(AnnotationDbi)
+not_all_na <- function(x) any(!is.na(x))
+txdb <- loadDb("~/Github/pvdiv-genome/Pvirgatum_516_v5.1.gene.txdb.sqlite")
+
+anno_c <- m_clumped %>%
+  filter(Num_Sig_Conditions > 0) %>%
+  mutate(start = POS - 10000,
+         end = POS + 10000)
+
+annos_mash_c_df <- pvdiv_table_topsnps(df = anno_c, type = "table", 
+                                       rangevector = 0, txdb = txdb) 
+annos_mash_c_df_functval <- annos_mash_c_df %>%
+    inner_join(os_annos, by = c("Gene ID")) %>%
+    left_join(osgene_key, by = c("OsGene" = "Symbol")) %>%
+    dplyr::select(where(not_all_na)) %>%
+    group_by(CHR, POS, `Gene ID`) %>%
+    dplyr::slice(1) %>% 
+    arrange(desc(log10BayesFactor))
+write_csv(annos_mash_c_df_functval, 
+          file = file.path(outputdir1, paste0("Mash_annotations_with_functional_validation", suffix, ".csv")))
+```
+
+```{r}
+
+for(i in 1:nrow(qtl_df)) {  # from 1 to 16
+## Sig in mash, Has functional annotation & in QTL interval
+QTL_and_anno <- annos_mash_c_df_functval %>%
+  filter(CHR %in% qtl_df$CHR[i] & between(POS, qtl_df$POS_lo[i],
+                                           qtl_df$POS_hi[i]))
+
+  if(i == 1){
+  QTL_and_anno_df <- QTL_and_anno
+  } else {
+  QTL_and_anno_df <- QTL_and_anno_df %>%
+    full_join(QTL_and_anno)
+  }
+}
+
+QTL_and_anno_df %>%
+  dplyr::select(where(not_all_na)) %>%
+  write_csv(file = file.path(outputdir1, paste0("Mash_annotations_in_QTL_regions_with_functional_validation", suffix, ".csv")))
+```
+
