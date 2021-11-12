@@ -1,0 +1,163 @@
+---
+title: "Analysis permuted phenotypes"
+author: "Alice MacQueen"
+date: "11/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(snpdiver)
+library(modelr)
+```
+
+set up 2-3 panicle data mash runs: completely permuted phenotypes, phenotypes permuted within subpopulations/ecotypes, GWAS on each replicate & compare their overlaps, sample from these replicates for other GWAS... what are major conserved hits if any? 
+
+Here are my notes I have from the last meeting with Tom:
+shuffle phenotypes & genotypes, make a null with no genotype-phenotype association, and run mash, look at what you find
+try and rerun mash on just the subpopulations, do the loadings on the covariance matrices change?
+
+
+# Mash with permuted BLUPs
+
+## Set up permuted data with sample
+```{r}
+metadata <- readRDS(here("data/metadata.rds"))
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(here("data", 
+                          paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+
+phe_gwas1 %>%
+  filter(SUBPOP != "4X") %>%
+  group_by(ECOTYPE, SUBPOP) %>%
+  mutate(SBN_KBSM_1 = sample(SBN_KBSM),
+         PL_PKLE_1 = sample(PL_PKLE),
+         PBN_PKLE_1 = sample(PBN_PKLE)
+         ) %>%
+  arrange(ECOTYPE, SUBPOP) # convince myself this sampling is obeying group_by
+
+# Then resample for all phenotypes in three different sets
+permuted_phe_subpop <- phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  group_by(PHE_SITE, SUBPOP) %>%
+  mutate(MEAS = sample(MEAS)) %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+permuted_phe_subpop_ecotype <- phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE) & SUBPOP != "4X") %>%
+  group_by(PHE_SITE, SUBPOP, ECOTYPE_NNET) %>%
+  mutate(MEAS = sample(MEAS)) %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+permuted_phe <- phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  group_by(PHE_SITE) %>%
+  mutate(MEAS = sample(MEAS)) %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+
+saveRDS(permuted_phe, here("data/permuted_phenotypes_geno_subset.rds"))
+saveRDS(permuted_phe_subpop, here("data/permuted_phenotypes_within_subpops_geno_subset.rds"))
+saveRDS(permuted_phe_subpop_ecotype, here("data/permuted_phenotypes_within_subpop_and_ecotype_geno_subset.rds"))
+
+```
+
+## Set up GWAS & mash
+
+```{r}
+permuted_phe <- readRDS(here("data/permuted_phenotypes_geno_subset.rds"))
+permuted_phe_subpop_ecotype <- 
+  readRDS(here("data/permuted_phenotypes_within_subpop_and_ecotype_geno_subset.rds"))
+permuted_phe_subpop <- 
+  readRDS(here("data/permuted_phenotypes_within_subpops_geno_subset.rds"))
+
+phe_gwas_list <- list(permuted_phe = permuted_phe,
+                      permuted_phe_by_subpop = permuted_phe_subpop,
+                      permuted_phe_by_subpop_and_ecotype = permuted_phe_subpop_ecotype)
+
+```
+
+## Run dive_phe2mash
+```{r}
+if (!dir.exists(here("analysis", "mash", "permutations"))) {
+  dir.create(here("analysis", "mash", "permutations"))
+}
+
+k = 7
+suffix_svd <- paste0("big_three_garden_SNPs", names(subpop_v2)[k])
+pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
+                                                        "_svd.rds")))
+  
+for (i in seq_along(phe_gwas_list)) {
+  pavir_pan <- phe_gwas_list[[i]]
+  suffix = paste0(names(phe_gwas_list)[i])
+  pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
+  
+  m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
+                         save.plots = FALSE,
+                         type = "linear", suffix = suffix, 
+                         outputdir = outputdir, num.strong = 5000, 
+                         num.random = 100000)
+  saveRDS(m_pan, file = here("analysis", "mash", "permutations", 
+                             paste0("Full_mash_model_",
+                                    "5000", "_SNPs_U_ed_and_",
+                                    "100000", "_SNPs_mash_fit_",
+                                                    suffix, ".rds")))
+  mash_plot_covar(m_pan, saveoutput = TRUE, suffix = suffix)
+
+  manhattan <- mash_plot_manhattan_by_condition(m_pan, snp = pavir_snp, 
+                                                saveoutput = TRUE)
+  mash_clumps <- snp_clumping(pavir_snp$genotypes, 
+                              infos.chr = markers$CHRN, thr.r2 = 0.2, 
+                              infos.pos = markers$POS, 
+                              S = manhattan$ggman_df$log10BayesFactor)
+  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
+  write_csv(mash_df_clumped, file = here("analysis", "mash", "permutations",
+                                              paste0("Clumped_mash_output_df_",
+                                                     suffix, ".csv")))
+}
+
+```
+
+
+
+# Mash or just GWAS on replicates to look for major conserved hits, probably with upset plots
+
+## Set up data for GWAS
+could potentially resample the data too, shuffle which replicate belongs to which, then compare.
+
+```{r}
+phe <- readRDS(here("data/panicle_phenotypes_genotype_subset.rds"))
+phe <- phe %>%
+  mutate(phe_name = case_when(PHE == "PAN_LEN" ~ "PL",
+                              PHE == "PRIM_BN" ~ "PBN",
+                              PHE == "SEC_BN" ~ "SBN"))
+phe$ECOTYPE_NNET <- factor(phe$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
+phe$SITE <- factor(phe$SITE, levels = c("PKLE", "CLMB", "KBSM"))
+phe$phe_name <- factor(phe$phe_name, levels = c("PL", "PBN", "SBN"))
+```
+
