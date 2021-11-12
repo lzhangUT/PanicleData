@@ -9,8 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
+library(bigsnpr)
 library(snpdiver)
-library(modelr)
 ```
 
 set up 2-3 panicle data mash runs: completely permuted phenotypes, phenotypes permuted within subpopulations/ecotypes, GWAS on each replicate & compare their overlaps, sample from these replicates for other GWAS... what are major conserved hits if any? 
@@ -89,17 +89,43 @@ saveRDS(permuted_phe_subpop_ecotype, here("data/permuted_phenotypes_within_subpo
 ## Set up GWAS & mash
 
 ```{r}
-permuted_phe <- readRDS(here("data/permuted_phenotypes_geno_subset.rds"))
+permuted_phe <- readRDS(here("data/permuted_phenotypes_geno_subset.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
 permuted_phe_subpop_ecotype <- 
-  readRDS(here("data/permuted_phenotypes_within_subpop_and_ecotype_geno_subset.rds"))
+  readRDS(here("data/permuted_phenotypes_within_subpop_and_ecotype_geno_subset.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
 permuted_phe_subpop <- 
-  readRDS(here("data/permuted_phenotypes_within_subpops_geno_subset.rds"))
+  readRDS(here("data/permuted_phenotypes_within_subpops_geno_subset.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
 
-phe_gwas_list <- list(permuted_phe = permuted_phe,
+(phe_gwas_list <- list(permuted_phe = permuted_phe,
                       permuted_phe_by_subpop = permuted_phe_subpop,
-                      permuted_phe_by_subpop_and_ecotype = permuted_phe_subpop_ecotype)
+                      permuted_phe_by_subpop_and_ecotype = permuted_phe_subpop_ecotype))
 
 ```
+
+```{r}
+subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
+                  Gulf = "Gulf", Atlantic = "Atlantic", 
+                  Atlantic_and_Midwest = c("Atlantic", "Midwest"),
+                  Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
+                  All = c("Atlantic", "Gulf", "Midwest", "4X"))
+k = 7
+suffix_svd <- paste0("big_three_garden_SNPs", names(subpop_v2)[k])
+pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
+                                                        "_svd.rds")))
+  
+bigsnp_inputs <- read_delim(here("analysis", 
+                                   "bigsnp_inputs.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") 
+```
+
 
 ## Run dive_phe2mash
 ```{r}
@@ -107,11 +133,6 @@ if (!dir.exists(here("analysis", "mash", "permutations"))) {
   dir.create(here("analysis", "mash", "permutations"))
 }
 
-k = 7
-suffix_svd <- paste0("big_three_garden_SNPs", names(subpop_v2)[k])
-pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
-                                                        "_svd.rds")))
-  
 for (i in seq_along(phe_gwas_list)) {
   pavir_pan <- phe_gwas_list[[i]]
   suffix = paste0(names(phe_gwas_list)[i])
@@ -120,7 +141,8 @@ for (i in seq_along(phe_gwas_list)) {
   m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
                          save.plots = FALSE,
                          type = "linear", suffix = suffix, 
-                         outputdir = outputdir, num.strong = 5000, 
+                         outputdir = here("analysis", "mash", "permutations"),
+                         num.strong = 5000, 
                          num.random = 100000)
   saveRDS(m_pan, file = here("analysis", "mash", "permutations", 
                              paste0("Full_mash_model_",
@@ -159,5 +181,138 @@ phe <- phe %>%
 phe$ECOTYPE_NNET <- factor(phe$ECOTYPE_NNET, levels = c("Upland", "Coastal", "Lowland", "Unknown"))
 phe$SITE <- factor(phe$SITE, levels = c("PKLE", "CLMB", "KBSM"))
 phe$phe_name <- factor(phe$phe_name, levels = c("PL", "PBN", "SBN"))
+
+pheA <- phe %>%
+  filter(REP == "A") %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -REP, -YEAR) %>%
+  pivot_wider(names_from = c("phe_name", "SITE"), values_from = MEAS, 
+              values_fn = mean)
+pheB <- phe %>%
+  filter(REP == "B") %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -REP, -YEAR) %>%
+  pivot_wider(names_from = c("phe_name", "SITE"), values_from = MEAS, 
+              values_fn = mean)
+pheC <- phe %>%
+  filter(REP == "C") %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -REP, -YEAR) %>%
+  pivot_wider(names_from = c("phe_name", "SITE"), values_from = MEAS, 
+              values_fn = mean)
+
+phe_notperm <- phe %>%
+  filter((PLANT_ID == "J636.B" & SITE == "KBSM"))
+
+pheD <- phe %>%
+  filter(!(PLANT_ID == "J636.B" & SITE == "KBSM")) %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -YEAR) %>%
+  group_by(PLANT_ID, phe_name, SITE) %>%
+  mutate(MEAS_perm = sample(MEAS)) %>%
+  filter(REP == "A") %>%
+  full_join(phe_notperm) %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -REP, -YEAR, -MEAS) %>%
+  pivot_wider(names_from = c("phe_name", "SITE"), values_from = MEAS_perm, 
+              values_fn = mean)
+pheE <- phe %>%
+  filter(!(PLANT_ID == "J636.B" & SITE == "KBSM")) %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -YEAR) %>%
+  group_by(PLANT_ID, phe_name, SITE) %>%
+  mutate(MEAS_perm = sample(MEAS)) %>%
+  filter(REP == "C") %>%
+  full_join(phe_notperm) %>%
+  select(-BLACKWELL, -manu_site, -PHE, -PLOT_GL, -REP, -YEAR, -MEAS) %>%
+  pivot_wider(names_from = c("phe_name", "SITE"), values_from = MEAS_perm, 
+              values_fn = mean)
+
+
+saveRDS(pheA, file = here("data/raw_phenotypes_replicate_A_GWAS.rds"))
+saveRDS(pheB, file = here("data/raw_phenotypes_replicate_B_GWAS.rds"))
+saveRDS(pheC, file = here("data/raw_phenotypes_replicate_C_GWAS.rds"))
+saveRDS(pheD, file = here("data/raw_phenotypes_replicate_D_GWAS.rds"))
+saveRDS(pheE, file = here("data/raw_phenotypes_replicate_E_GWAS.rds"))
 ```
 
+## Set up GWAS & mash
+
+```{r}
+phe_repA <- readRDS(here("data/raw_phenotypes_replicate_A_GWAS.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_repB <- readRDS(here("data/raw_phenotypes_replicate_B_GWAS.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_repC <- readRDS(here("data/raw_phenotypes_replicate_C_GWAS.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_repD <- readRDS(here("data/raw_phenotypes_replicate_D_GWAS.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
+phe_repE <- readRDS(here("data/raw_phenotypes_replicate_E_GWAS.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID)
+
+(phe_gwas_list <- list(phe_repA = phe_repA,
+                      phe_repB = phe_repB,
+                      phe_repC = phe_repC,
+                      phe_repD = phe_repD,
+                      phe_repE = phe_repE))
+
+```
+
+```{r}
+subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
+                  Gulf = "Gulf", Atlantic = "Atlantic", 
+                  Atlantic_and_Midwest = c("Atlantic", "Midwest"),
+                  Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
+                  All = c("Atlantic", "Gulf", "Midwest", "4X"))
+k = 7
+suffix_svd <- paste0("big_three_garden_SNPs", names(subpop_v2)[k])
+pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
+                                                        "_svd.rds")))
+  
+bigsnp_inputs <- read_delim(here("analysis", 
+                                   "bigsnp_inputs.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") 
+```
+
+
+## Run dive_phe2mash
+```{r}
+if (!dir.exists(here("analysis", "mash", "replicates"))) {
+  dir.create(here("analysis", "mash", "replicates"))
+}
+
+for (i in seq_along(phe_gwas_list)) {
+  pavir_pan <- phe_gwas_list[[i]]
+  suffix = paste0(names(phe_gwas_list)[i])
+  pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
+  
+  m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
+                         save.plots = FALSE,
+                         type = "linear", suffix = suffix, 
+                         outputdir = here("analysis", "mash", "replicates"),
+                         num.strong = 5000, 
+                         num.random = 100000)
+  saveRDS(m_pan, file = here("analysis", "mash", "replicates", 
+                             paste0("Full_mash_model_",
+                                    "5000", "_SNPs_U_ed_and_",
+                                    "100000", "_SNPs_mash_fit_",
+                                                    suffix, ".rds")))
+  mash_plot_covar(m_pan, saveoutput = TRUE, suffix = suffix)
+
+  manhattan <- mash_plot_manhattan_by_condition(m_pan, snp = pavir_snp, 
+                                                saveoutput = TRUE)
+  mash_clumps <- snp_clumping(pavir_snp$genotypes, 
+                              infos.chr = markers$CHRN, thr.r2 = 0.2, 
+                              infos.pos = markers$POS, 
+                              S = manhattan$ggman_df$log10BayesFactor)
+  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
+  write_csv(mash_df_clumped, file = here("analysis", "mash", "replicates",
+                                              paste0("Clumped_mash_output_df_",
+                                                     suffix, ".csv")))
+}
+
+```
