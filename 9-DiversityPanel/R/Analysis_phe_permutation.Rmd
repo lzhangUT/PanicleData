@@ -54,7 +54,7 @@ permuted_phe_subpop <- phe_gwas %>%
   filter(!grepl("SEC_LN", PHE_SITE)) %>%
   group_by(PHE_SITE, SUBPOP) %>%
   mutate(MEAS = sample(MEAS)) %>%
-  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "SUB_PERM_")
 permuted_phe_subpop_ecotype <- phe_gwas %>% 
   pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
   mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
@@ -66,7 +66,7 @@ permuted_phe_subpop_ecotype <- phe_gwas %>%
   filter(!grepl("SEC_LN", PHE_SITE) & SUBPOP != "4X") %>%
   group_by(PHE_SITE, SUBPOP, ECOTYPE_NNET) %>%
   mutate(MEAS = sample(MEAS)) %>%
-  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "SUB_ECO_PERM_")
 permuted_phe <- phe_gwas %>% 
   pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
   mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
@@ -78,12 +78,63 @@ permuted_phe <- phe_gwas %>%
   filter(!grepl("SEC_LN", PHE_SITE)) %>%
   group_by(PHE_SITE) %>%
   mutate(MEAS = sample(MEAS)) %>%
-  pivot_wider(names_from = PHE_SITE, values_from = MEAS)
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "ALL_PERM_")
+
+phe_notperm1 <- phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, remove = FALSE) %>%
+  group_by(COL_SITE) %>% tally() %>% arrange(n) %>%
+  filter(n <= 9)
+phe_notperm2 <- phe_gwas %>%
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, remove = FALSE) %>%
+  filter(COL_SITE %in% phe_notperm1$COL_SITE)
+
+ind_perm_phe <- phe_gwas %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, remove = FALSE) %>%
+  group_by(COL_SITE) %>%
+  filter(!COL_SITE %in% phe_notperm1$COL_SITE) %>%
+  group_by(COL_SITE, PHE_SITE) %>%
+  mutate(MEAS = sample(MEAS)) %>%
+  full_join(phe_notperm2) %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "IND_PERM_") %>%
+  ungroup() %>%
+  select(-COL_SITE, -PLANT_ID_IND, -SUBPOP, -ECOTYPE_NNET) # 271 of 381 individuals permuted within collection sites
 
 saveRDS(permuted_phe, here("data/permuted_phenotypes_geno_subset.rds"))
 saveRDS(permuted_phe_subpop, here("data/permuted_phenotypes_within_subpops_geno_subset.rds"))
 saveRDS(permuted_phe_subpop_ecotype, here("data/permuted_phenotypes_within_subpop_and_ecotype_geno_subset.rds"))
 
+all_permuted_phe <- permuted_phe %>%
+  full_join(permuted_phe_subpop) %>%
+  full_join(permuted_phe_subpop_ecotype) %>%
+  full_join(ind_perm_phe) %>%
+  filter(!is.na(PLANT_ID))
+colSums(!is.na(all_permuted_phe))
+
+saveRDS(all_permuted_phe, here("data/all_permuted_phenotypes_geno_subset.rds"))
 ```
 
 ## Set up GWAS & mash
@@ -124,6 +175,7 @@ pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
 bigsnp_inputs <- read_delim(here("analysis", 
                                    "bigsnp_inputs.txt"),  delim = " ", 
                                    col_names = "SNPfiles") 
+
 ```
 
 
@@ -138,34 +190,47 @@ for (i in seq_along(phe_gwas_list)) {
   suffix = paste0(names(phe_gwas_list)[i])
   pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
   
-  m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
-                         save.plots = FALSE,
-                         type = "linear", suffix = suffix, 
-                         outputdir = here("analysis", "mash", "permutations"),
-                         num.strong = 5000, 
-                         num.random = 100000)
+  m_pan <- dive_phe2effects(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
+                       type = "linear", suffix = suffix, ncores = 11, 
+                       outputdir = here("analysis", "mash", "replicates"))
+}
+
+for (i in seq_along(phe_gwas_list)) {
+  suffix = paste0(names(phe_gwas_list)[i])
+  pavir_gwas <- big_attach(here("analysis", "mash", "replicates", 
+                                paste0("gwas_effects_", suffix, ".rds")))
+  pavir_meta <- read_csv(here("analysis", "mash", "replicates", 
+                                paste0("gwas_effects_", suffix, 
+                                       "_associated_metadata.csv")))
+  pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
+  
+  m_pan <- dive_effects2mash(effects = pavir_gwas, metadata = pavir_meta, 
+                             snp = pavir_snp, suffix = suffix, thr.m = "max",
+                             outputdir = here("analysis", "mash", 
+                                              "permutations"),
+                             num.strong = 5000, num.random = 100000)
   saveRDS(m_pan, file = here("analysis", "mash", "permutations", 
                              paste0("Full_mash_model_",
                                     "5000", "_SNPs_U_ed_and_",
                                     "100000", "_SNPs_mash_fit_",
                                                     suffix, ".rds")))
-  mash_plot_covar(m_pan, saveoutput = TRUE, suffix = suffix)
+  mash_plot_covar(m_cpan, savceoutput = TRUE, suffix = suffix)
 
   manhattan <- mash_plot_manhattan_by_condition(m_pan, snp = pavir_snp, 
                                                 saveoutput = TRUE)
-  mash_clumps <- snp_clumping(pavir_snp$genotypes, 
-                              infos.chr = markers$CHRN, thr.r2 = 0.2, 
-                              infos.pos = markers$POS, 
-                              S = manhattan$ggman_df$log10BayesFactor)
-  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
-  write_csv(mash_df_clumped, file = here("analysis", "mash", "permutations",
-                                              paste0("Clumped_mash_output_df_",
-                                                     suffix, ".csv")))
+#  mash_clumps <- snp_clumping(pavir_snp$genotypes, 
+#                              infos.chr = markers$CHRN, thr.r2 = 0.2, 
+#                              infos.pos = markers$POS, 
+#                              S = manhattan$ggman_df$log10BayesFactor)
+#  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
+#  write_csv(mash_df_clumped, file = here("analysis", "mash", "permutations",
+#                                              paste0("Clumped_mash_output_df_",
+#                                                     suffix, ".csv")))
 }
 
 ```
 
-
+# ---------
 
 # Mash or just GWAS on replicates to look for major conserved hits, probably with upset plots
 
@@ -254,12 +319,25 @@ phe_repE <- readRDS(here("data/raw_phenotypes_replicate_E_GWAS.rds")) %>%
   select(-SUBPOP, -ECOTYPE_NNET) %>%
   rename(sample.ID = .data$PLANT_ID)
 
-(phe_gwas_list <- list(phe_repA = phe_repA,
-                      phe_repB = phe_repB,
-                      phe_repC = phe_repC,
-                      phe_repD = phe_repD,
-                      phe_repE = phe_repE))
+phe_rep_all <- phe_repA %>%
+  full_join(phe_repB, by = "sample.ID") %>%
+  full_join(phe_repC, by = "sample.ID") %>%
+  full_join(phe_repD, by = "sample.ID") %>%
+  full_join(phe_repE, by = "sample.ID")
 
+colnames(phe_rep_all) <- str_replace_all(colnames(phe_rep_all), ".x.x", "_C")
+colnames(phe_rep_all) <- str_replace_all(colnames(phe_rep_all), ".y.y", "_D")
+colnames(phe_rep_all) <- str_replace_all(colnames(phe_rep_all), ".x", "_A")
+colnames(phe_rep_all) <- str_replace_all(colnames(phe_rep_all), ".y", "_B")
+colnames(phe_rep_all)[38:46] <- paste0(colnames(phe_rep_all)[38:46], "_E")
+
+phe_rep_all <- phe_rep_all %>%
+  select(sample.ID, starts_with("PL_PKLE"), starts_with("PL_CLMB"), 
+         starts_with("PL_KBSM"), starts_with("PBN_PKLE"),
+         starts_with("PBN_CLMB"), starts_with("PBN_KBSM"), 
+         starts_with("SBN_PKLE"),
+         starts_with("SBN_CLMB"), starts_with("SBN_KBSM")
+         )
 ```
 
 ```{r}
@@ -285,34 +363,11 @@ if (!dir.exists(here("analysis", "mash", "replicates"))) {
   dir.create(here("analysis", "mash", "replicates"))
 }
 
-for (i in seq_along(phe_gwas_list)) {
-  pavir_pan <- phe_gwas_list[[i]]
-  suffix = paste0(names(phe_gwas_list)[i])
-  pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
-  
-  m_pan <- dive_phe2mash(df = pavir_pan, snp = pavir_snp, svd = pavir_svd,
-                         save.plots = FALSE,
-                         type = "linear", suffix = suffix, 
-                         outputdir = here("analysis", "mash", "replicates"),
-                         num.strong = 5000, 
-                         num.random = 100000)
-  saveRDS(m_pan, file = here("analysis", "mash", "replicates", 
-                             paste0("Full_mash_model_",
-                                    "5000", "_SNPs_U_ed_and_",
-                                    "100000", "_SNPs_mash_fit_",
-                                                    suffix, ".rds")))
-  mash_plot_covar(m_pan, saveoutput = TRUE, suffix = suffix)
+suffix = "replicated_panicle_phe"
+pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
 
-  manhattan <- mash_plot_manhattan_by_condition(m_pan, snp = pavir_snp, 
-                                                saveoutput = TRUE)
-  mash_clumps <- snp_clumping(pavir_snp$genotypes, 
-                              infos.chr = markers$CHRN, thr.r2 = 0.2, 
-                              infos.pos = markers$POS, 
-                              S = manhattan$ggman_df$log10BayesFactor)
-  mash_df_clumped <- manhattan$ggman_df[mash_clumps,]
-  write_csv(mash_df_clumped, file = here("analysis", "mash", "replicates",
-                                              paste0("Clumped_mash_output_df_",
-                                                     suffix, ".csv")))
-}
+m_pan <- dive_phe2effects(df = phe_rep_all, snp = pavir_snp, svd = pavir_svd,
+                       type = "linear", suffix = suffix, ncores = 8, 
+                       outputdir = here("analysis", "mash", "replicates"))
 
 ```
