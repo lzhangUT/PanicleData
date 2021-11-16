@@ -92,6 +92,17 @@ phe_notperm1 <- phe_gwas %>%
   separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, remove = FALSE) %>%
   group_by(COL_SITE) %>% tally() %>% arrange(n) %>%
   filter(n <= 9)
+phe_notperm2 <- phe_gwas %>%
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, remove = FALSE) %>%
+  filter(COL_SITE %in% phe_notperm1$COL_SITE)
 
 ind_perm_phe <- phe_gwas %>% 
   pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
@@ -107,10 +118,10 @@ ind_perm_phe <- phe_gwas %>%
   filter(!COL_SITE %in% phe_notperm1$COL_SITE) %>%
   group_by(COL_SITE, PHE_SITE) %>%
   mutate(MEAS = sample(MEAS)) %>%
-  full_join(phe_notperm1) %>%
+  full_join(phe_notperm2) %>%
   pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "IND_PERM_") %>%
   ungroup() %>%
-  select(-COL_SITE, -PLANT_ID_IND, -SUBPOP, -ECOTYPE_NNET, -n, -IND_PERM_NA) # 271 of 381 individuals permuted within collection sites
+  select(-COL_SITE, -PLANT_ID_IND, -SUBPOP, -ECOTYPE_NNET) # 271 of 381 individuals permuted within collection sites
 
 saveRDS(permuted_phe, here("data/permuted_phenotypes_geno_subset.rds"))
 saveRDS(permuted_phe_subpop, here("data/permuted_phenotypes_within_subpops_geno_subset.rds"))
@@ -119,7 +130,9 @@ saveRDS(permuted_phe_subpop_ecotype, here("data/permuted_phenotypes_within_subpo
 all_permuted_phe <- permuted_phe %>%
   full_join(permuted_phe_subpop) %>%
   full_join(permuted_phe_subpop_ecotype) %>%
-  full_join(ind_perm_phe)
+  full_join(ind_perm_phe) %>%
+  filter(!is.na(PLANT_ID))
+colSums(!is.na(all_permuted_phe))
 
 saveRDS(all_permuted_phe, here("data/all_permuted_phenotypes_geno_subset.rds"))
 ```
