@@ -30,6 +30,16 @@ phe$phe_name <- factor(phe$phe_name, levels = c("PL", "PBN", "SBN"))
      
 ```
 
+# Figure 2b J numbers for Xiaoyu
+```{r}
+metadata %>% 
+  filter(grepl("J496", PLANT_ID) | grepl("J610", PLANT_ID) | grepl("J594", PLANT_ID) | grepl("J556", PLANT_ID) | grepl("J483", PLANT_ID) | grepl("J498", PLANT_ID) | grepl("J565", PLANT_ID) | grepl("J346", PLANT_ID) | grepl("J501", PLANT_ID) | grepl("J363", PLANT_ID)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything()) %>%
+  arrange(PLANT_ID) %>%
+  write_csv(here("writeup/PLANT_ID_Panicle_Figure_2b.csv"))
+```
+
+
 # Figure S1
 
 Population structure & PCs
