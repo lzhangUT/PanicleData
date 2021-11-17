@@ -11,6 +11,7 @@ library(tidyverse)
 library(here)
 library(bigsnpr)
 library(snpdiver)
+
 ```
 
 set up 2-3 panicle data mash runs: completely permuted phenotypes, phenotypes permuted within subpopulations/ecotypes, GWAS on each replicate & compare their overlaps, sample from these replicates for other GWAS... what are major conserved hits if any? 
@@ -137,8 +138,142 @@ colSums(!is.na(all_permuted_phe))
 saveRDS(all_permuted_phe, here("data/all_permuted_phenotypes_geno_subset.rds"))
 ```
 
-## Set up GWAS & mash
+## Set up GWAS & mash on all_panicle phe
 
+
+```{r}
+(all_permuted_phe <- readRDS(here("data/all_permuted_phenotypes_geno_subset.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET) %>%
+  rename(sample.ID = .data$PLANT_ID))
+
+subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
+                  Gulf = "Gulf", Atlantic = "Atlantic", 
+                  Atlantic_and_Midwest = c("Atlantic", "Midwest"),
+                  Atlantic_and_Gulf = c("Atlantic", "Gulf"), 
+                  All = c("Atlantic", "Gulf", "Midwest", "4X"))
+k = 7
+suffix_svd <- paste0("big_three_garden_SNPs", names(subpop_v2)[k])
+pavir_svd <- readRDS(file = here("analysis", "mash", paste0(suffix_svd,
+                                                        "_svd.rds")))
+  
+bigsnp_inputs <- read_delim(here("analysis", 
+                                   "bigsnp_inputs.txt"),  delim = " ", 
+                                   col_names = "SNPfiles") 
+
+```
+
+
+## Run dive_phe2effects
+```{r}
+if (!dir.exists(here("analysis", "mash", "permutations"))) {
+  dir.create(here("analysis", "mash", "permutations"))
+}
+
+suffix = "permuted_panicle_phe"
+pavir_snp <- snp_attach(bigsnp_inputs$SNPfiles[k])
+
+m_pan <- dive_phe2effects(df = all_permuted_phe, snp = pavir_snp, svd = pavir_svd,
+                       type = "linear", suffix = suffix, ncores = 12, 
+                       outputdir = here("analysis", "mash", "permutations"))
+
+
+m_pan2 <- dive_effects2mash(effects = m_pan$effects, snp = pavir_snp, 
+                            metadata = m_pan$metadata, 
+                            suffix = "permuted_panicle_phe_5Kstrong_100Krandom",
+                            outputdir = here("analysis", "mash",
+                                             "permutations"), ncores = 12,
+                            num.strong = 5000, num.random = 100000)
+
+  saveRDS(m_pan2, file = here("analysis", "mash", "permutations", 
+                             paste0("Full_mash_model_",
+                                    "5000", "_SNPs_U_ed_and_",
+                                    "100000", "_SNPs_mash_fit_",
+                                                    suffix, ".rds")))
+  mash_plot_covar(m_pan2, saveoutput = TRUE, suffix = suffix)
+
+  manhattan <- mash_plot_manhattan_by_condition(m_pan2, snp = pavir_snp, 
+                                                saveoutput = TRUE)
+```
+
+## Upset plots of permutations
+
+### functions to make data frame for single SNPs for Upset plots
+```{r}
+
+library(ComplexUpset)
+library(cowplot)
+library(matrixStats)
+
+thresholdFBM <- function(X, ind, thr) { #, quantile = NA) {
+  #if(!is.na(quantile)) {
+  #thr <- quantile(X[, ind], quantile)
+  #}
+  case_when(X[, ind] > thr ~ TRUE,
+            TRUE ~ FALSE)
+}
+
+big_upset_df <- function(gwas, thr = 7, quantile = NA, metadata){
+  gwas_ok <- floor(gwas$ncol / 3)
+  ind_p <- (1:(gwas_ok))*3
+  colnames_fbm <- metadata$phe
+  if(gwas$ncol < (sum(gwas_ok)*3 + 1))  {
+  gwas$add_columns(ncol_add = 1)
+    }  # add a column for the threshold score if there isn't one already
+  thr_df <- big_apply(gwas, a.FUN = function(X, ind) rowMaxs(as.matrix(gwas[, ind])), 
+                      ind = ind_p, a.combine = 'c', block.size = 100)
+  gwas[,(sum(gwas_ok)*3 + 1)] <- thr_df
+  thr_df <- which(thr_df > thr)
+  thr_df <- big_copy(gwas, ind.row = thr_df, ind.col = ind_p)
+
+  for (j in seq_along(1:thr_df$ncol)) {  # standardize one gwas at a time.
+  thr_df[, j] <- big_apply(thr_df, a.FUN = thresholdFBM, ind = j, thr = thr,
+                              a.combine = 'plus')
+  }
+  
+  thr_df1 <- thr_df[1:thr_df$nrow, 1:thr_df$ncol]
+  colnames(thr_df1) <- colnames_fbm
+  thr_df1 <- as_tibble(thr_df1)
+  return(thr_df1)
+}
+
+```
+
+```{r}
+if (!dir.exists(here("analysis", "gwas", "permutations"))) {
+  dir.create(here("analysis", "gwas", "permutations"))
+}
+
+thr_fbm <- big_upset_df(m_pan$effects, thr = 6.5, metadata = m_pan$metadata)
+
+upset_plot <- upset(thr_fbm, colnames(thr_fbm), min_size = 0, name = "Significant at -log10p > 6.5", sort_sets=FALSE)
+save_plot(filename = here("analysis", "gwas", "permutations",
+                          paste0("Upset_plot_",
+                                 "four_panicle_permutation_types",".png")),
+          plot = upset_plot, base_height = 12)
+
+thr_fbm7 <- big_upset_df(m_pan$effects, thr = 7, metadata = m_pan$metadata)
+
+upset_plot7 <- upset(thr_fbm7, colnames(thr_fbm7), min_size = 0, name = "Significant at -log10p > 7", sort_sets=FALSE)
+save_plot(filename = here("analysis", "gwas", "permutations",
+                          paste0("Upset_plot_thr_7_",
+                                 "four_panicle_permutation_types",".png")),
+          plot = upset_plot7, base_height = 12)
+
+thr_fbmb <- big_upset_df(m_pan$effects, thr = 8.573, metadata = m_pan$metadata)
+
+upset_plotb <- upset(thr_fbmb, colnames(thr_fbmb), min_size = 0, name = "Significant at -log10p > Bonferroni", sort_sets = FALSE)
+save_plot(filename = here("analysis", "gwas", "permutations",
+                          paste0("Upset_plot_thr_Bonferroni_",
+                                 "four_panicle_permutation_types",".png")),
+          plot = upset_plotb, base_height = 12)
+-log10(18704908/0.05)
+```
+this one plot honestly answers any upset plot questions for this guy. Basically no overlaps between any permuted phenotype. Ok.
+
+
+## --------
+## Run dive_phe2mash on list of panicle phe
 ```{r}
 permuted_phe <- readRDS(here("data/permuted_phenotypes_geno_subset.rds")) %>%
   ungroup() %>%
@@ -161,6 +296,7 @@ permuted_phe_subpop <-
 
 ```
 
+
 ```{r}
 subpop_v2 <- list(Gulf_and_Midwest = c("Gulf", "Midwest"), Midwest = "Midwest", 
                   Gulf = "Gulf", Atlantic = "Atlantic", 
@@ -178,8 +314,6 @@ bigsnp_inputs <- read_delim(here("analysis",
 
 ```
 
-
-## Run dive_phe2mash
 ```{r}
 if (!dir.exists(here("analysis", "mash", "permutations"))) {
   dir.create(here("analysis", "mash", "permutations"))
@@ -371,3 +505,96 @@ m_pan <- dive_phe2effects(df = phe_rep_all, snp = pavir_snp, svd = pavir_svd,
                        outputdir = here("analysis", "mash", "replicates"))
 
 ```
+
+```{r}
+m_pan2 <- dive_effects2mash(effects = m_pan$effects, snp = pavir_snp, 
+                            metadata = m_pan$metadata, 
+                            suffix = "replicated_panicle_phe_5Kstrong_100Krandom",
+                            outputdir = here("analysis", "mash",
+                                             "replicates"), ncores = 12,
+                            num.strong = 5000, num.random = 100000)
+
+  saveRDS(m_pan2, file = here("analysis", "mash", "replicates", 
+                             paste0("Full_mash_model_",
+                                    "5000", "_SNPs_U_ed_and_",
+                                    "100000", "_SNPs_mash_fit_",
+                                                    suffix, ".rds")))
+  mash_plot_covar(m_pan2, saveoutput = TRUE, suffix = suffix)
+
+  manhattan <- mash_plot_manhattan_by_condition(m_pan2, snp = pavir_snp, 
+                                                saveoutput = TRUE)
+```
+
+
+# ---
+# Upset plots of replicates
+```{r}
+
+library(ComplexUpset)
+library(cowplot)
+library(matrixStats)
+
+thresholdFBM <- function(X, ind, thr) { #, quantile = NA) {
+  #if(!is.na(quantile)) {
+  #thr <- quantile(X[, ind], quantile)
+  #}
+  case_when(X[, ind] > thr ~ TRUE,
+            TRUE ~ FALSE)
+}
+
+big_upset_df <- function(gwas, thr = 7, quantile = NA, metadata){
+  gwas_ok <- floor(gwas$ncol / 3)
+  ind_p <- (1:(gwas_ok))*3
+  colnames_fbm <- metadata$phe
+  if(gwas$ncol < (sum(gwas_ok)*3 + 1))  {
+  gwas$add_columns(ncol_add = 1)
+    }  # add a column for the threshold score if there isn't one already
+  thr_df <- big_apply(gwas, a.FUN = function(X, ind) rowMaxs(as.matrix(gwas[, ind])), 
+                      ind = ind_p, a.combine = 'c', block.size = 100)
+  gwas[,(sum(gwas_ok)*3 + 1)] <- thr_df
+  thr_df <- which(thr_df > thr)
+  thr_df <- big_copy(gwas, ind.row = thr_df, ind.col = ind_p)
+
+  for (j in seq_along(1:thr_df$ncol)) {  # standardize one gwas at a time.
+  thr_df[, j] <- big_apply(thr_df, a.FUN = thresholdFBM, ind = j, thr = thr,
+                              a.combine = 'plus')
+  }
+  
+  thr_df1 <- thr_df[1:thr_df$nrow, 1:thr_df$ncol]
+  colnames(thr_df1) <- colnames_fbm
+  thr_df1 <- as_tibble(thr_df1)
+  return(thr_df1)
+}
+
+```
+
+```{r}
+thr_fbm <- big_upset_df(m_pan$effects, thr = 6.5, metadata = m_pan$metadata)
+
+upset_plot <- upset(thr_df, colnames(thr_df), min_size = 25, name = "Significant at -log10p > 6.5")
+save_plot(filename = here("analysis", "mash", "replicates",
+                          paste0("Upset_plot_", "5_panicle_replicates",".png")),
+          plot = upset_plot, base_height = 12)
+
+upset_plot <- upset(thr_df, colnames(thr_df)[1:15], min_size = 5, name = "Significant at -log10p > 6.5")
+save_plot(filename = here("analysis", "mash", "replicates",
+                          paste0("Upset_plot_", "5_panicle_replicates_", 
+                                 "PL", ".png")),
+          plot = upset_plot, base_height = 12)
+
+upset_plot <- upset(thr_df, colnames(thr_df)[16:30], min_size = 5, name = "Significant at -log10p > 6.5")
+save_plot(filename = here("analysis", "mash", "replicates",
+                          paste0("Upset_plot_", "5_panicle_replicates_", 
+                                 "PBN", ".png")),
+          plot = upset_plot, base_height = 12)
+
+upset_plot <- upset(thr_df, colnames(thr_df)[31:45], min_size = 5, name = "Significant at -log10p > 6.5")
+save_plot(filename = here("analysis", "mash", "replicates",
+                          paste0("Upset_plot_", "5_panicle_replicates_", 
+                                 "SBN", ".png")),
+          plot = upset_plot, base_height = 12)
+
+
+```
+
+These really don't overlap. May need to bin by 20kb region again and try and make Upset plots of those overlaps instead. Ugh.
