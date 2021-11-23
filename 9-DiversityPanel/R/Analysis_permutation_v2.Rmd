@@ -1,0 +1,134 @@
+---
+title: "Permuted phenotypes 2"
+author: "Alice MacQueen"
+date: "11/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(bigsnpr)
+library(switchgrassGWAS)
+
+```
+
+# New SNP files
+
+Tom asked if we get similar GWAS when using a SNP file with a higher MAF, say 10%.
+
+Also, I want to get mash to run on these GWAS results, maybe using switchgrassGWAS, maybe using snpdiver. Not sure what bugfixes will be required to achieve this yet.
+
+```{r load data}
+snp <- snp_attach("~/Github/pvdiv-genome/big_three/Pvirgatum_V5_GWAS_630g_33M_big_three.rds")
+plants <- snp$fam$sample.ID
+
+metadata <- readRDS(here("data/metadata.rds"))
+phe_df <- readRDS(here("data/all_permuted_phenotypes_geno_subset.rds"))
+plink <- download_plink()
+```
+
+```{r pop subset function}
+
+pvdiv_pop_subset_bigsnp <- function(snp, subset, selector, maf = NA){
+  if (is.na(maf)) {
+    mac <- round(25/length(selector), digits = 2) # what should the MAF be?
+    if(mac > 0.05){
+      mac <- 0.05
+    }
+  } else {
+    mac <- maf
+  }
+  
+  subset_name <- paste0("Pvirgatum_V5_GWAS_", length(selector), "g_", subset, 
+                        "_subset_maf_", mac)
+  snpfile_subset <- subset(snp, ind.row = selector)
+  snp_subset <- snp_attach(snpfile_subset)
+  snp_writeBed(snp_subset, bedfile = paste0(subset_name, ".bed"))
+  
+  bedfile <- snp_plinkQC(plink, prefix.in = subset_name,
+                     maf = mac, geno = 0.1, hwe = 1e-50, 
+                     prefix.out = paste0(subset_name, "_maf", mac),
+                     extra.options = "--allow-no-sex --allow-extra-chr --chr Chr01K Chr01N Chr02K Chr02N Chr03K Chr03N Chr04K Chr04N Chr05K Chr05N Chr06K Chr06N Chr07K Chr07N Chr08K Chr08N Chr09K Chr09N")
+  rdsfile <- snp_readBed(bedfile)
+}
+
+```
+
+```{r make selector}
+panicle_381 <- which(plants %in% phe_df$PLANT_ID)
+
+```
+
+```{r make subset}
+pvdiv_pop_subset_bigsnp(snp = snp, subset = "PanicleData", 
+                        selector = panicle_381, maf = 0.05)
+# 381 genotypes and 12.7M SNPs
+pvdiv_pop_subset_bigsnp(snp = snp, subset = "PanicleData", 
+                        selector = panicle_381, maf = 0.10)
+# 381 genotypes and 7.4M SNPs
+```
+
+```{r}
+381*.05
+```
+# --------------
+# Analysis of these two new subsets
+```{r}
+snp10 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.1.rds")
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+
+testphe <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/test_phe_switchgrassGWAS.rds")
+```
+
+
+## GWAS on real and permuted data
+```{r}
+(all_permuted_phe <- readRDS(here("data/all_permuted_phenotypes_geno_subset.rds")) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET))
+
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+(phe_gwas <- read_csv(here("data", 
+                          paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  pivot_longer(2:13, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "BLUP_"))
+
+(all_raw_reps <- readRDS(file = here("data/all_replicates_raw_phenotypes_geno_subset.rds")) %>%
+  rename(PLANT_ID = sample.ID))
+
+permuted_phe2 <- readRDS(here("data/permuted_phenotypes_geno_subset.rds"))
+permuted_phe2 <- permuted_phe2 %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET)
+
+all_phe <- phe_gwas %>%
+  full_join(permuted_phe2) %>%
+  full_join(all_permuted_phe) %>%
+  full_join(all_raw_reps) %>%
+  select(PLANT_ID, contains("PL_PKLE"), contains("PL_CLMB"), 
+         contains("PL_KBSM"), contains("PBN_PKLE"),
+         contains("PBN_CLMB"), contains("PBN_KBSM"), 
+         contains("SBN_PKLE"),
+         contains("SBN_CLMB"), contains("SBN_KBSM"), everything()
+         )
+saveRDS(all_phe, file = here("data/all_blup_raw_and_permuted_panicle_phe_geno_subset.rds"))
+
+all_phe %>%
+  select(PLANT_ID, BLUP_PL_PKLE, BLUP_PBN_KBSM, BLUP_SBN_PKLE) %>%
+  saveRDS(here("data/test_phe_switchgrassGWAS.rds"))
+```
+
+
+## GWAS on BLUP & more noisy replicate data
+
+## mash on real and permuted data
