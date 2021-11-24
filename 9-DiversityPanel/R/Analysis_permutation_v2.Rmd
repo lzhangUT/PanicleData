@@ -129,6 +129,17 @@ all_phe %>%
 ```
 
 
+```{r}
+covar <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe/SVD_381g_7.4M_SNPs_15PCs.rds")
+
+gwas <- pvdiv_standard_gwas(snp = snp10, df = testphe, covar = covar, 
+                            type = "linear", 
+                            outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe", 
+                            savegwas = TRUE, savetype = 'fbm', 
+                            suffix = "test_phe")
+```
+
+
 ## GWAS on BLUP & more noisy replicate data
 
 ## mash on real and permuted data
