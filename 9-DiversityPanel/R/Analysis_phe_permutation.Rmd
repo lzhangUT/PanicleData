@@ -472,6 +472,7 @@ phe_rep_all <- phe_rep_all %>%
          starts_with("SBN_PKLE"),
          starts_with("SBN_CLMB"), starts_with("SBN_KBSM")
          )
+saveRDS(phe_rep_all, file = here("data/all_replicates_raw_phenotypes_geno_subset.rds"))
 ```
 
 ```{r}
@@ -598,3 +599,15 @@ save_plot(filename = here("analysis", "mash", "replicates",
 ```
 
 These really don't overlap. May need to bin by 20kb region again and try and make Upset plots of those overlaps instead. Ugh.
+
+
+Other analyses I could consider now:
+
+Just run mash on these permuted & replicated phenotypes and see what I get.
+-> some error: Now preparing gwas effects for use in mash.
+Error: 'value' must be unique or of the dimension of 'x[i, j]'.
+fix this. Ugh.
+
+Add GWAS on BLUPs to these perm & rep phenotypes & look at Upset plots
+
+Run mash on the above files too - meaningful overlaps between "real" results and permuted results?
