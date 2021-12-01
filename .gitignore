@@ -10,3 +10,4 @@ Clumped_*
 *All_svd.rds
 *.zip
 9-DiversityPanel/data/Pvirgatum_V5_GWAS*
+9-DiversityPanel/analysis/gwas/testphe/*
