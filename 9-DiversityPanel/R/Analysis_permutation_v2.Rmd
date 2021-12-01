@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
 library(bigsnpr)
-library(switchgrassGWAS)
+# library(switchgrassGWAS)
 
 ```
 
@@ -75,16 +75,10 @@ pvdiv_pop_subset_bigsnp(snp = snp, subset = "PanicleData",
 ```
 # --------------
 # Analysis of these two new subsets
-```{r}
-snp10 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.1.rds")
-snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
-
-testphe <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/test_phe_switchgrassGWAS.rds")
-```
 
 
 ## GWAS on real and permuted data
-```{r}
+```{r prepare phenotypes}
 (all_permuted_phe <- readRDS(here("data/all_permuted_phenotypes_geno_subset.rds")) %>%
   ungroup() %>%
   select(-SUBPOP, -ECOTYPE_NNET))
@@ -128,18 +122,186 @@ all_phe %>%
   saveRDS(here("data/test_phe_switchgrassGWAS.rds"))
 ```
 
+```{r load files}
+snp10 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.1.rds")
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
 
-```{r}
-covar <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe/SVD_381g_7.4M_SNPs_15PCs.rds")
+testphe <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/test_phe_switchgrassGWAS.rds")
+all_phe <- readRDS(file = here("data/all_blup_raw_and_permuted_panicle_phe_geno_subset.rds"))
+covar10 <- readRDS("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe/SVD_381g_7.4M_SNPs_15PCs.rds")
+plot(covar10)
+plot(covar10, type = "scores")
+```
 
-gwas <- pvdiv_standard_gwas(snp = snp10, df = testphe, covar = covar, 
+
+
+```{r ten percent maf GWAS}
+if (!dir.exists(here("analysis", "gwas", "MAF10"))) {
+  dir.create(here("analysis", "gwas", "MAF10"))
+}
+pvdiv_standard_gwas(snp = snp10, df = all_phe, covar = covar10, 
                             type = "linear", 
-                            outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe", 
+                            outputdir = here("analysis", "gwas", "MAF10"), 
                             savegwas = TRUE, savetype = 'fbm', 
-                            suffix = "test_phe")
+                            suffix = "all_panicle_phe_MAF_10per")
+```
+
+
+```{r five percent maf GWAS}
+if (!dir.exists(here("analysis", "gwas", "MAF05"))) {
+  dir.create(here("analysis", "gwas", "MAF05"))
+}
+pvdiv_standard_gwas(snp = snp05, df = all_phe, 
+                            type = "linear", 
+                            outputdir = here("analysis", "gwas", "MAF05"), 
+                            savegwas = TRUE, savetype = 'fbm', 
+                            suffix = "all_panicle_phe_MAF_5per")
 ```
 
 
 ## GWAS on BLUP & more noisy replicate data
+```{r}
+library(tidyverse)
+library(bigsnpr)
+library(ComplexUpset)
+library(cowplot)
+
+effects <- big_attach("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe/gwas_effects_test_phe.rds")
+
+metadata <- read_csv("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe/gwas_effects_test_phe_associated_metadata.csv")
+
+```
+
+```{r}
+upset1 <- get_fbm_upset_df(effects = gwas, metadata = gwas_metadata)
+upsetp <- upset(upset1, colnames(upset1)[-(1:2)])
+save_plot(filename = "./Upset_test.png", plot = upsetp)
+
+```
+
 
 ## mash on real and permuted data
+
+```{r}
+mtest <- dive_effects2mash(effects = effects, snp = snp10, metadata = metadata, 
+                  suffix = "test_mash", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+
+
+snp10_sub <- subset(snp10, ind.col = c(1, 1000000, 2000000, 3000000, 4000000, 5000000, 6000000, 7000000))
+snp_10s <- snp_attach(snp10_sub)
+effects_sub <- big_copy(effects, ind.row = c(1,1000000,2000000,3000000,4000000,5000000,6000000,7000000))
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_10s, metadata = metadata, 
+                  suffix = "test_mash", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+        
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_10s, metadata = metadata, phe = c(1,2),
+                  suffix = "test_mash", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+             
+```
+
+# test dive_effects2mash on just some columns of an effects fbm
+
+```{r}
+subsample <- c(1:7400)*1000
+
+snp10 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.1.rds")
+effects_all <- big_attach("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/MAF10/gwas_effects_all_panicle_phe_MAF_10per.rds")
+
+metadata <- read_csv("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/MAF10/gwas_effects_all_panicle_phe_MAF_10per_associated_metadata.csv")
+
+snp10_sub <- subset(snp10, ind.col = subsample)
+snp_10s <- snp_attach(snp10_sub)
+effects_sub <- big_copy(effects, ind.row = subsample)
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_10s, metadata = metadata, phe = c(1,7:11), suffix = "test_mash_3", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_10s, 
+                           metadata = metadata, 
+                  suffix = "test_mash_2", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+
+mtest4 <- dive_effects2mash(effects = effects_all, snp = snp10, 
+                           metadata = metadata, 
+                  suffix = "test_mash_4", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/testphe")
+         
+
+```
+
+
+```{r}
+effects10 <- big_attach(here("analysis/gwas/MAF10/gwas_effects_all_panicle_phe_MAF_10per.rds"))
+metadata10 <- read_csv(here("analysis/gwas/MAF10/gwas_effects_all_panicle_phe_MAF_10per_associated_metadata.csv"))
+```
+
+```{r}
+library(ComplexUpset)
+upset_10_thr_8 <- pvdiv_fbm_upset_df(effects = effects10, metadata = metadata10,
+                                     snp = snp10, thr = 8)
+upset_10_thr_7 <- pvdiv_fbm_upset_df(effects = effects10, metadata = metadata10,
+                                     snp = snp10, thr = 7)
+upset_10_thr_6 <- pvdiv_fbm_upset_df(effects = effects10, metadata = metadata10,
+                                     snp = snp10, thr = 6)
+upset_10_thr_5 <- pvdiv_fbm_upset_df(effects = effects10, metadata = metadata10,
+                                     snp = snp10, thr = 5)
+
+upset_plot_10thr6 <- upset(upset_10_thr_6, intersect = colnames(upset_10_thr_6)[(3:35)], name = "-log10p > 6", min_size = 10)
+upset_plot_10thr6
+
+upset1 <- upset_10_thr_5 %>%
+  select(contains("PERM"), contains("BLUP")) %>%
+  select(!contains("IND_PERM"))
+upsetp1 <- upset(upset1, intersect = colnames(upset1), name = "-log10p > 5",
+                 min_size = 5, sort_sets=FALSE)
+upsetp1
+
+upset1 <- upset_10_thr_5 #%>%
+  #select(contains("IND_PERM"), contains("BLUP")) 
+upsetp1 <- upset(upset1, intersect = colnames(upset1), name = "-log10p > 5",
+                 min_size = 5, sort_sets=FALSE)
+upsetp1
+
+upset1 <- upset_10_thr_5 %>%
+  select(ends_with("_A"),ends_with("_B"),ends_with("_C"),ends_with("_D"),ends_with("_E"), contains("BLUP")) 
+upsetp1 <- upset(upset1, intersect = colnames(upset1), name = "-log10p > 5",
+                 min_size = 5, sort_sets=FALSE)
+upsetp1
+```
+
+
+# Mash tests in testphe
+
+```{r}
+m1 <- readRDS(here("analysis/gwas/testphe/mash_test_2.rds"))
+
+mash_plot_covar(m1)
+tpca <- mash_plot_Ulist(m1, range = 6)
+length(get_significant_results(m1))
+mash_plot_effects(m1, n = 1)
+mash_plot_effects(m1, n = 2)
+mash_plot_effects(m1, n = 6333)
+mash_plot_sig_by_condition(m1, which(grepl("ALL_PERM", switchgrassGWAS:::get_colnames(m1)) == TRUE))
+
+snpdiver::mash_plot_Ulist(m1, range = 6, labels = FALSE)
+
+tpca$ED_tPCA_df %>%
+  filter(grepl("BLUP", rowU)) %>%
+  filter(abs(covar) > 0.05) %>%
+  filter(grepl("PERM", colU))
+tpca$ED_tPCA_df %>%
+  filter(grepl("BLUP", rowU)) %>%
+  filter(abs(covar) > 0.05) %>%
+  arrange(colU)
+
+tpca$ED_tPCA_df %>%
+  filter(grepl("ALL_PERM", rowU)) %>%
+  filter(abs(covar) > 0.05)
+tpca$ED_tPCA_df %>%
+  filter(grepl("SUB_PERM", rowU)) %>%
+  filter(abs(covar) > 0.05)
+```
+
