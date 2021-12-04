@@ -1,0 +1,327 @@
+---
+title: "Test PanicleData"
+author: "Alice MacQueen"
+date: "12/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+devtools::load_all()
+```
+
+# 9. Add a constant to a trait value for just one subpopulation before GWAS. Can you recover this spiked in signal in GWAS? Or does your population structure correction control for it?
+
+```{r}
+## Set up permuted data with sample
+metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
+subpops <- readRDS("~/Github/pvdiv-phenology-gxe/data/subpop_color_coding.rds")
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(file.path("~/Github/PanicleData/9-DiversityPanel/data", 
+                          paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything()) %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) 
+```
+
+## Spike in signals
+
+Ideas: spike in data perfectly associated with one SNP I know. Add a constant to any individual with the alternate allele of that SNP.
+
+Spike in data - add a constant - perfectly associated with the Gulf subpopulation, and one perfectly associated with the Atlantic subpopulation.
+
+Do this on _both_ the BLUP background and on the fully permuted background.
+
+That's five datasets. Six if I do this for, oh, two different SNPs. 
+
+Can compare Upset plots with and without the spiked in signal? And QQ. And Manhattans.
+
+```{r}
+
+```
+
+
+# 10. More complex analysis: make a covariance matrix with just ancestry informative markers for your phenotype. What does this matrix look like?
+
+Ancestry informative markers refers to locations in the genome that have varied sequences at that location and the relative abundance of those markers differs based on the continent from which individuals can trace their ancestry. 
+
+Interesting idea to just include this as a hypothesis-based matrix in mash and see what happens.
+
+Would be smart to pick ancestry informative markers from the SNPs picked for the SVD. I can clump on the SNP file using default settings and that should recapture the SNPs found for the covariance/SVD. Or, no, actually I already have this in:
+```{r}
+attr(covar05, "subset")
+```
+
+Find MAF of the SNPs in this subset in each population. Use the kind of selector I already developed to determine which of these SNPs are ancestry informative.
+
+    * Also keep and compare MAF 5% and MAF 10% GWAS. And investigate if I can just subset GWAS results to MAF 10% results. That would be better in the long run. I don't see why that wouldn't be possible given the snp_maf function and the subset & big_copy functions.
+
+# ---------
+
+# 8. Compare covar05 and covar10
+Will comparing GWAS with MAF cutoff of 5% and 10% be similar? Depends on the population structure correction used mostly. That's the major difference between doing 2 separate GWAS & doing one on MAF of 5% then thresholding up to 10%.
+
+```{r}
+covar05 <- readRDS(file.path("~/Github/PanicleData/9-DiversityPanel/", 
+                             "analysis", "gwas", "MAF05",
+                             "SVD_381g_12.8M_SNPs_15PCs.rds"))
+covar10 <- readRDS(file.path("~/Github/PanicleData/9-DiversityPanel/", 
+                             "analysis", "gwas", "MAF10", 
+                             "SVD_381g_7.4M_SNPs_15PCs.rds"))
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+snp10 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.1.rds")
+plants <- snp10$fam$sample.ID
+
+plants <- enframe(plants, name = "row", value = "PLANT_ID") %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET))
+
+
+u05 <- as_tibble(covar05$u) %>%
+  add_column(PLANT_ID = plants$PLANT_ID, .before = TRUE)
+u10 <- as_tibble(covar10$u) %>%
+  add_column(PLANT_ID = plants$PLANT_ID, .before = TRUE)
+colnames(u10)[2:16] <- paste0("u10_", colnames(u10[2:16]))
+colnames(u05)[2:16] <- paste0("u05_", colnames(u05[2:16]))
+
+covar_comp <- u05 %>%
+  full_join(u10) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything())
+  
+covar_comp <- covar_comp %>%
+  pivot_longer(cols = 4:33, names_to = "Utype", values_to = "MEAS") %>%
+  separate(Utype, into = c("MAF", "PC"), sep = "_") %>%
+  pivot_wider(names_from = MAF, values_from = MEAS)
+covar_comp %>%
+  ggplot(aes(x = u05, y = u10)) + 
+  geom_point(aes(color = SUBPOP, shape = ECOTYPE_NNET)) + 
+  geom_abline(slope = 1, linetype = 2) +
+  facet_wrap(~PC) +
+  scale_color_manual(values = subpops$color_code) +
+  scale_shape_manual(values = c(0, 1, 4))
+```
+
+Even subtle differences could have big effects (see: averages vs BLUPs for GWAS), but, even still, big noticeable differences start taking place in V7 and after - V7 through V15 (apart from an inversion of one axis in V3). This _may_ be further argument to do the SVD with more SNPs, then subset. I guess it depends - my intuition is that adding more rare SNPs would help discriminate between more closely related individuals - it would be like adding more phylogenetically informative SNPs. But would you want to correct for this signal if it wasn't actually in your GWAS data? That's unclear. 
+What does privefl say? https://privefl.github.io/bigsnpr/articles/pruning-vs-clumping.html
+
+5% covar has 1.75M SNPs; 10% covar only has 0.99M SNPs. So that's many more regions of the genome that don't have representatives in them in the 10% covar example. Given that the SVD clumps on MAF, these regions of the genome would also not be represented in the GWAS.
+
+
+Comparing the Manhattans, there is not a huge difference in peaks between the MAF 5% and 10% GWAS on the same phenotypes. Often, mostly, there are fewer peaks in the 10% MAF, and often more population structure correction is done on these GWAS (perhaps because SNPs at a 10% MAF do a less good job accounting for ancestry, and so more PCs are needed for the same amount of pop structure correction). Occassionally there were peaks that appeared in the 10% MAF that weren't present in the 5% MAF - these are concerning, potentially are due to differences in the two covar SVD. 
+
+Since talking about how rare T-cells have different distributional properties than common T-cells, like there are more rare T-cells so there are more likely to be some with skewed/matching distributions by chance, I've been thinking a lot about how the properties of a distribution can differ with the frequency of the thing in the distribution. Because of course allele frequency distributions are the same way. There are many more rare SNPs and thus there are more likely to be some with matching distributions to a phenotype by chance. 
+
+tl;dr: Removing low frequency SNPs seems to clean up the GWAS a lot - removes lots of background noise peaks, and removes some signal. Not sure what's lost if I, say, chose to subset SNPs after GWAS vs before GWAS. 
+
+Maybe I could make swgGWAS upset df for both then compare which CHR & POS come up in each? Join by CHR & POS? Worth a try!
+
+# ------------
+
+# 
+
+```{r}
+effects10 <- big_attach(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                  "analysis/gwas/MAF10/", "gwas_effects_all_panicle_phe_MAF_10per.rds"))
+metadata10 <- read_csv(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF10/", "gwas_effects_all_panicle_phe_MAF_10per_associated_metadata.csv"))
+effects05 <- big_attach(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                  "analysis/gwas/MAF05/", "gwas_effects_all_panicle_phe_MAF_5per.rds"))
+metadata05 <- read_csv(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF05/", "gwas_effects_all_panicle_phe_MAF_5per_associated_metadata.csv"))
+```
+
+```{r test big upset df on data subset}
+subsample <- c(1:7400)*1000
+snp10_sub <- subset(snp10, ind.col = subsample)
+snp_10s <- snp_attach(snp10_sub)
+effects_sub <- big_copy(effects10, ind.row = subsample)
+
+upsets10 <- big_upset_df(effects = effects_sub, snp = snp_10s, 
+                         metadata = metadata10,
+                       thr = 6, ncores = 5)
+```
+
+```{r}
+upset10_thr6 <- big_upset_df(effects = effects10, snp = snp10, 
+                             metadata = metadata10, thr = 6, ncores = 5)
+upset05_thr6 <- big_upset_df(effects = effects05, snp = snp05, 
+                             metadata = metadata05, thr = 6, ncores = 5)
+saveRDS(upset05_thr6, file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF05/", "Upset_df_MAF05_thr6.rds"))
+saveRDS(upset10_thr6, file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF10/", "Upset_df_MAF10_thr6.rds"))
+
+```
+
+# --
+
+```{r}
+upset05_thr6 <- readRDS(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF05/", "Upset_df_MAF05_thr6.rds"))
+upset10_thr6 <- readRDS(file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                 "analysis/gwas/MAF10/", "Upset_df_MAF10_thr6.rds"))
+```
+
+.x is 10%
+.y is 5%
+y should often have more hits than x
+
+```{r}
+upset_thr6 <- upset10_thr6 %>%
+  full_join(upset05_thr6, by = c("CHR", "POS")) %>%
+  mutate(across(-(CHR:POS), ~ replace_na(.x, 0)))
+
+library(ComplexUpset)
+
+upset_v1 <- upset_thr6 %>%
+  select(contains("BLUP")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p1 <- upset(upset_v1, intersect = colnames(upset_v1), name = "-log10p-value > 6", min_size = 5, sort_sets = FALSE)
+
+upset_p1
+```
+
+## 8b. 20kb/100kb bins: Can I round to have hits within 20kb bins, given this data frame?
+
+The argument here is that the same SNP may not always tag the same gene/genomic region, but the same genomic region may be tagged several times by SNPs at slightly different frequencies nearby one another. Not sure I buy this, but ok.
+
+So 10% and 5% do have a consistent set of non-overlapping 20kb & 100kb regions in the 10% set that's not significant in the 5% set. That's slightly worrisome because I don't know what would cause this. In the 5% set it's clear that these could be caused by SNPs that just aren't in the 10% set. But in the 10% set this is maybe the different population structure correction? I don't know.
+
+Another thing is these aren't consistent regions of the genome, nor are consistent regions of the genome hit in any permutation, really. So we aren't necessarily finding regions of the genome that have consistent bias due to population structure. What do we make of that?
+
+Actually with 10% MAF there are way more 100kb overlaps in the SUB_PERM and SUB_ECO_PERM groups. To me, this means that the 10% MAF SVD is not doing as good a job correcting for population structure. Therefore when just the population-specific signals are left in, you get more hits.
+```{r}
+upset_thr6_20kb1 <- upset_thr6 %>%
+  mutate(POS_bin1 = round(POS/100000)*100000,
+         POS_bin2 = round((POS+10000)/20000)*20000,
+         ) %>%
+  select(CHR, POS, POS_bin1, POS_bin2, everything()) %>%
+  group_by(CHR, POS_bin1) %>%
+  summarise(across(-(POS:POS_bin2), ~ max(.x)))
+
+upset_v2 <- upset_thr6_20kb1 %>%
+  ungroup() %>%
+  select(contains("BLUP")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p2 <- upset(upset_v2, intersect = colnames(upset_v2), name = "-log10p-value > 6", min_size = 5, sort_sets = FALSE)
+
+upset_p2
+
+upset_v3 <- upset_thr6_20kb1 %>%
+  ungroup() %>%
+  select(contains("IND_PERM")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p3 <- upset(upset_v3, intersect = colnames(upset_v3), name = "-log10p-value > 6", min_size = 2, sort_sets = FALSE)
+
+upset_p3
+
+upset_v4 <- upset_thr6_20kb1 %>%
+  ungroup() %>%
+  select(contains("_A."), contains("_B."), contains("_C."), contains("_D."),
+         contains("_E.")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p4 <- upset(upset_v4, intersect = colnames(upset_v4), name = "-log10p-value > 6", min_size = 5, sort_sets = FALSE)
+
+upset_p4
+```
+
+Another thing is these aren't consistent regions of the genome, nor are consistent regions of the genome hit in any permutation, really. So we aren't necessarily finding regions of the genome that have consistent bias due to population structure. What do we make of that?
+
+Actually with 10% MAF there are way more 100kb overlaps in the SUB_PERM and SUB_ECO_PERM groups. And there are many more hits in the 10% MAF in these groups. 
+
+To me, this means that the 10% MAF SVD is not doing as good a job correcting for population structure. Therefore when just the population-specific signals are left in, you get more hits & more regions with the same biases towards hits.
+
+This is the first compelling reason to do GWAS on 5% MAF and subset to 10% MAF or whatever as necessary afterwards, in my opinion.
+```{r}
+upset_v5 <- upset_thr6_20kb1 %>%
+  ungroup() %>%
+  select(contains("PERM") & !contains("IND_PERM") & contains(".x")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p5 <- upset(upset_v5, intersect = colnames(upset_v5), name = "-log10p-value > 6", min_size = 3, sort_intersections_by = "degree")
+
+upset_p5
+
+upset_v6 <- upset_thr6_20kb1 %>%
+  ungroup() %>%
+  select(contains("PERM") & !contains("IND_PERM") & contains(".y")) %>%
+  select(contains("PL_PKLE"), contains("PL_CLMB"), contains("PL_KBSM"),
+         contains("PBN_PKLE"), contains("PBN_CLMB"), contains("PBN_KBSM"),
+         contains("SBN_PKLE"), contains("SBN_CLMB"), contains("SBN_KBSM"))
+upset_p6 <- upset(upset_v6, intersect = colnames(upset_v6), name = "-log10p-value > 6", min_size = 3, sort_intersections_by = "degree")
+
+upset_p6
+```
+
+# 7. Test effects2mash works on just some columns of an effects fbm.
+
+Test on PID_PERM GWAS set.
+Run on just a subset of SNPs first so it's fast.
+Confirm by looking at mash results.
+
+```{r}
+effectspid <- big_attach("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid.rds")
+
+metapid <- read_csv("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid_associated_metadata.csv")
+
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+```
+
+```{r}
+subsample1k <- c(1:740)*10000
+subsample10k <- c(1:7400)*1000
+snp05_sub <- subset(snp05, ind.col = subsample10k)
+snp_05s <- snp_attach(snp05_sub)
+effects_sub <- big_copy(effectspid, ind.row = subsample10k)
+
+```
+
+```{r}
+load_all()
+mpid1 <- dive_effects2mash(effects = effects_sub, snp = snp_05s, metadata = metapid, phe = c(3, 8, 35:39, 62, 98), scale.phe = FALSE, thr.r2 = 1)
+                           )
+metapid[c(1,10:14),]
+metapid[c(3, 8, 35:39, 62, 98),]
+
+mash_plot_sig_by_condition(mpid1)
+mash_plot_covar(mpid1)
+mash_plot_manhattan_by_condition(mpid1, snp = snp_05s)
+mash_plot_marker_effect(mpid1, snp = snp_05s, n = 1)
+mash_plot_Ulist(mpid1)
+mash_plot_meta(mpid1, i = 1)
+
+effects[1:3,35:39]
+```
+
+```{r}
+
+subsample100k <- c(1:74000)*100
+snp05_sub <- subset(snp05, ind.col = subsample100k)
+snp_05s <- snp_attach(snp05_sub)
+effects_sub <- big_copy(effectspid, ind.row = subsample100k)
+
+mpid2 <- dive_effects2mash(effects = effectspid, snp = snp05, metadata = metapid, suffix = "PID_PERM_", num.strong = 2000, num.random = 20000)
+
+```
+
+Subset effects & snp just to 10% MAF also and rerun effects2mash.
+
