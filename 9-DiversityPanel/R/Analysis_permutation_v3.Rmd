@@ -1,0 +1,175 @@
+---
+title: "Permuted phenotypes 3"
+author: "Alice MacQueen"
+date: "12/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(bigsnpr)
+# library(switchgrassGWAS)
+
+# library(snpdiver)
+
+```
+
+# GxE Group suggestions
+
+1. Just permute sample.ID relative to all the phenotypes. This will keep the correlations between phenotypes within individuals. Then you might recover these correlations still within mash.
+
+2. Add a constant to a trait value for just one subpopulation before GWAS. Can you recover this spiked in signal in GWAS? Or does your population structure correction control for it?
+
+3. More complex analysis: make a covariance matrix with just ancestry informative markers for your phenotype. What does this matrix look like?
+
+    * Also keep and compare MAF 5% and MAF 10% GWAS. And investigate if I can just subset GWAS results to MAF 10% results. That would be better in the long run. I don't see why that wouldn't be possible given the snp_maf function and the subset & big_copy functions.
+
+    * Want to write an article for switchgrassGWAS also, on how to make a table & specify the exact number of PCs to use, in case you like this correction but don't believe in whatever lambda_GC this function is programmed to find. Also, mention that there's GAPIT but that it will take a lot longer. 
+
+## Set up permuted data with sample
+```{r}
+metadata <- readRDS(here("data/metadata.rds"))
+prefix <- "pvdiv_panicles_2019_BLUPs_PLANT_ID_geno_subset_"
+
+phe_gwas <- read_csv(here("data", 
+                          paste0(prefix, "BLUP_phenotypes",
+                                              ".csv"))) %>%
+  left_join(select(metadata, PLANT_ID, SUBPOP, ECOTYPE_NNET)) %>%
+  select(PLANT_ID, SUBPOP, ECOTYPE_NNET, everything()) %>% 
+  pivot_longer(4:15, names_to = "PHE_SITE", values_to = "MEAS") %>%
+  mutate(PHE_SITE = str_replace_all(PHE_SITE, "PAN_LEN", "PL"),
+         PHE_SITE = str_replace_all(PHE_SITE, "SEC_BN", "SBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "PRIM_BN", "PBN"),
+         PHE_SITE = str_replace_all(PHE_SITE, "TX2", "PKLE"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MO", "CLMB"),
+         PHE_SITE = str_replace_all(PHE_SITE, "MI", "KBSM")) %>%
+  filter(!grepl("SEC_LN", PHE_SITE)) 
+```
+
+```{r}
+# permutations of PLANT_ID across all phenotyped individuals
+phe_perm_pid1 <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, 
+              names_prefix = "PERM_PID_1_") %>%
+  ungroup() %>%
+  mutate(sample.ID = sample(PLANT_ID, replace = FALSE)) %>%
+  select(PLANT_ID, sample.ID, everything()) %>%
+  select(-SUBPOP, -ECOTYPE_NNET, -PLANT_ID) %>%
+  rename(PLANT_ID = sample.ID)
+phe_perm_pid2 <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, 
+              names_prefix = "PERM_PID_2_") %>%
+  ungroup() %>%
+  mutate(sample.ID = sample(PLANT_ID, replace = FALSE)) %>%
+  select(PLANT_ID, sample.ID, everything()) %>%
+  select(-SUBPOP, -ECOTYPE_NNET, -PLANT_ID) %>%
+  rename(PLANT_ID = sample.ID)
+
+# permutations of PLANT_ID within subpopulations
+phe_perm_pid_sub <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, 
+              names_prefix = "PID_PERM_SUB_") %>%
+  group_by(SUBPOP) %>%
+  mutate(sample.ID = sample(PLANT_ID, replace = FALSE)) %>%
+  select(PLANT_ID, sample.ID, everything()) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET, -PLANT_ID) %>%
+  rename(PLANT_ID = sample.ID)
+
+# permutations of PLANT_ID within subpopulations & ecotypes
+phe_perm_pid_sub_eco <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, 
+              names_prefix = "PID_PERM_SUB_ECO_") %>%
+  group_by(SUBPOP, ECOTYPE_NNET) %>%
+  mutate(sample.ID = sample(PLANT_ID, replace = FALSE)) %>%
+  select(PLANT_ID, sample.ID, everything()) %>%
+  ungroup() %>%
+  select(-SUBPOP, -ECOTYPE_NNET, -PLANT_ID) %>%
+  rename(PLANT_ID = sample.ID)
+
+# permutations of PLANT_ID within collection sites
+phe_perm_pid_site <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, 
+              names_prefix = "PID_PERM_SITE_") %>%
+  separate(PLANT_ID, into = c("COL_SITE", "PLANT_ID_IND"), sep = -1, 
+         remove = FALSE) %>%
+  group_by(COL_SITE) %>%
+  mutate(sample.ID = sample(PLANT_ID, replace = FALSE)) %>%
+  select(PLANT_ID, sample.ID, everything()) %>%
+  ungroup() %>%
+  select(-COL_SITE, -PLANT_ID_IND, -SUBPOP, -ECOTYPE_NNET, -PLANT_ID) %>%
+  rename(PLANT_ID = sample.ID)
+
+ 
+```
+
+Join these permuted PLANT_ID dataframes together
+```{r}
+phe_blups <- phe_gwas %>%
+  pivot_wider(names_from = PHE_SITE, values_from = MEAS, names_prefix = "BLUP_") %>%
+  select(-SUBPOP, -ECOTYPE_NNET)
+
+(all_raw_reps <- readRDS(file = here("data/all_replicates_raw_phenotypes_geno_subset.rds")) %>%
+  rename(PLANT_ID = sample.ID))
+
+all_phe <- phe_blups %>%
+  full_join(all_raw_reps, by = "PLANT_ID") %>%
+  full_join(phe_perm_pid_site, by = "PLANT_ID") %>%
+  full_join(phe_perm_pid_sub_eco, by = "PLANT_ID") %>%
+  full_join(phe_perm_pid_sub, by = "PLANT_ID") %>%
+  full_join(phe_perm_pid1, by = "PLANT_ID") %>%
+  full_join(phe_perm_pid2, by = "PLANT_ID") 
+  #select(PLANT_ID, contains("PL_PKLE"), contains("PL_CLMB"), 
+  #       contains("PL_KBSM"), contains("PBN_PKLE"),
+  #       contains("PBN_CLMB"), contains("PBN_KBSM"), 
+  #       contains("SBN_PKLE"),
+  #       contains("SBN_CLMB"), contains("SBN_KBSM"), everything()
+  #       )
+saveRDS(all_phe, file = here("data", "all_panicle_phe_perm_pid.rds"))
+
+```
+
+
+# GWAS
+
+```{r}
+library(switchgrassGWAS)
+
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+covar05 <- readRDS(here("analysis", "gwas", "MAF05", "SVD_381g_12.8M_SNPs_15PCs.rds"))
+
+all_phe <- readRDS(file = here("data", "all_panicle_phe_perm_pid.rds"))
+
+if (!dir.exists(here("analysis", "gwas", "PID_PERM"))) {
+  dir.create(here("analysis", "gwas", "PID_PERM"))
+}
+pvdiv_standard_gwas(snp = snp05, df = all_phe, covar = covar05, 
+                    type = "linear", outputdir = here("analysis", "gwas",
+                                                      "PID_PERM"), 
+                    savegwas = TRUE, savetype = 'fbm', 
+                    suffix = "all_panicle_phe_perm_pid")
+
+```
+
+```{r}
+library(snpdiver)
+
+effectspid <- big_attach(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid.rds"))
+metadatapid <- read_csv(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid_associated_metadata.csv"))
+
+mtest5 <- dive_effects2mash(effects = effectspid, snp = snp05, 
+                           metadata = metadatapid, 
+                  suffix = "test_mash_5", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM")
+
+saveRDS(mtest5, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/Mash_output_all_panicle_phe_perm_pid.rds" )
+        
+
+```
+
+
+2. Add a constant to a trait value for just one subpopulation before GWAS. Can you recover this spiked in signal in GWAS? Or does your population structure correction control for it?
+
+3. More complex analysis: make a covariance matrix with just ancestry informative markers for your phenotype. What does this matrix look like?
