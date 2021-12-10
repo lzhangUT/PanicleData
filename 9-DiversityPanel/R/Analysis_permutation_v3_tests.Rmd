@@ -8,7 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-devtools::load_all()
+library(bigsnpr)
+library(snpdiver)
 ```
 
 # 9. Add a constant to a trait value for just one subpopulation before GWAS. Can you recover this spiked in signal in GWAS? Or does your population structure correction control for it?
@@ -324,4 +325,92 @@ mpid2 <- dive_effects2mash(effects = effectspid, snp = snp05, metadata = metapid
 ```
 
 Subset effects & snp just to 10% MAF also and rerun effects2mash.
+
+# Run later 12-06
+```{r}
+library(tidyverse)
+library(bigsnpr)
+library(snpdiver)
+metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
+subpops <- readRDS("~/Github/pvdiv-phenology-gxe/data/subpop_color_coding.rds")
+
+
+effectspid <- big_attach("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid.rds")
+metapid <- read_csv("~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid_associated_metadata.csv")
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+all_phe <- readRDS(file = file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                    "data", "all_panicle_phe_perm_pid.rds"))
+
+# Set up SNP subset given the PLANT_ID to include, the maf, and reduce to a 
+# small set of SNPs to test
+plants <- snp05$fam$sample.ID
+panicle_381 <- which(plants %in% all_phe$PLANT_ID)
+maf_thresh10 <-snp_MAF(snp05$genotypes, ind.row = panicle_381)
+snp_subset_maf10 <- which(maf_thresh10 > 0.1)
+snp_subset_maf10_10k <- c(1:floor(length(snp_subset_maf10)/1000))*1000
+snp_subset <- snp_subset_maf10[snp_subset_maf10_10k]
+
+# subset SNPs & effects given the above snp_subset of snp05
+snp05_sub <- subset(snp05, ind.col = snp_subset)
+snp_05s <- snp_attach(snp05_sub)
+effects_sub <- big_copy(effectspid, ind.row = snp_subset)
+
+# pick the phenotype subset
+# just use BLUPs this time which are in rows 1-9
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_05s, 
+                           metadata = metapid, phe = c(1:9),
+                  suffix = "test_BLUPs_maf10_10ksubset", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM")
+
+saveRDS(mtest, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/Mash_output_all_panicle_phe_perm_pid_test_mash_maf10_10ksubset.rds" )
+  
+```
+
+```{r}
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_05s, 
+                           metadata = metapid, phe = c(1:9, 55:99),
+                  suffix = "test_BLUPs_PERM_maf10_10ksubset", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM")
+
+saveRDS(mtest, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/Mash_output_all_panicle_phe_perm_pid_test_BLUPs_PERM_maf10_10ksubset.rds" )
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_05s, 
+                           metadata = metapid, phe = c(1:9, 55:99),
+                  suffix = "test_BLUPs_PERM_maf10_10ksubset", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM")
+
+saveRDS(mtest, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/Mash_output_all_panicle_phe_perm_pid_test_BLUPs_PERM_maf10_10ksubset.rds" )
+
+```
+Quite clearly in the 1:9, 55:99 (PERM & BLUP) - the equal_effects covariance structure is strongly in every condition. So when phenotypes are not correlated within genotypes, this structure goes away (as in the first set of permutations I did). But when they are correlated within genotypes, this structure is present & common.
+
+How could I test this further? Possibly I could just keep a single phenotype across all sites & test that. Secondly, I could just keep one rep from different phe*conditions - A, B, C, D, E, and rotate around. Probably these will still be correlated across different panicles on the same individual but they may be a little less correlated.
+```{r}
+phePL <- c(1,4,7,55,58,61,64,67,70,73,76,79,82,85,88,91,94,97)
+
+mtest <- dive_effects2mash(effects = effects_sub, snp = snp_05s, 
+                           metadata = metapid, phe = phePL,
+                  suffix = "PL_BLUPs_PERM_maf10_10ksubset", 
+                  outputdir = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM")
+
+saveRDS(mtest, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_PERM/Mash_output_all_panicle_phe_perm_pid_PL_BLUPs_PERM_maf10_10ksubset.rds" )
+
+```
+
+
+
+```{r}
+mash_plot_covar(mtest, saveoutput = TRUE)
+tpca <- mash_plot_Ulist(mtest, range = 6)
+length(get_significant_results(mtest))
+mash_plot_manhattan_by_condition(mtest, snp = snp_05s, saveoutput = TRUE)
+mash_plot_marker_effect(mtest, snp = snp_05s, n = 1, saveoutput = TRUE)
+
+mash_plot_sig_by_condition(mtest, which(grepl("ALL_PERM", switchgrassGWAS:::get_colnames(mtest)) == TRUE), saveoutput = TRUE)
+
+snpdiver::mash_plot_Ulist(mtest, range = 1:6, labels = FALSE, saveoutput = TRUE)
+
+```
+
 

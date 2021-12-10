@@ -135,20 +135,23 @@ saveRDS(all_phe, file = here("data", "all_panicle_phe_perm_pid.rds"))
 # GWAS
 
 ```{r}
+library(tidyverse)
+library(here)
+library(bigsnpr)
 library(switchgrassGWAS)
 
 snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
-covar05 <- readRDS(here("analysis", "gwas", "MAF05", "SVD_381g_12.8M_SNPs_15PCs.rds"))
+covar05 <- readRDS(here("analysis", "gwas", "PID_PERM", "SVD_381g_12.8M_SNPs_15PCs.rds"))
 
 all_phe <- readRDS(file = here("data", "all_panicle_phe_perm_pid.rds"))
 
-if (!dir.exists(here("analysis", "gwas", "PID_PERM"))) {
-  dir.create(here("analysis", "gwas", "PID_PERM"))
+if (!dir.exists(here("analysis", "gwas", "PID_PERM2"))) {
+  dir.create(here("analysis", "gwas", "PID_PERM2"))
 }
 pvdiv_standard_gwas(snp = snp05, df = all_phe, covar = covar05, 
                     type = "linear", outputdir = here("analysis", "gwas",
-                                                      "PID_PERM"), 
-                    savegwas = TRUE, savetype = 'fbm', 
+                                                      "PID_PERM2"), 
+                    saveplots = FALSE, savegwas = TRUE, savetype = 'fbm', 
                     suffix = "all_panicle_phe_perm_pid")
 
 ```
