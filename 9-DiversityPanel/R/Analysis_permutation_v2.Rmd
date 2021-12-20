@@ -278,7 +278,7 @@ upsetp1
 ```{r}
 m1 <- readRDS(here("analysis/gwas/testphe/mash_test_2.rds"))
 
-mash_plot_covar(m1)
+mash_plot_covar(m1, saveoutput = TRUE)
 tpca <- mash_plot_Ulist(m1, range = 6)
 length(get_significant_results(m1))
 mash_plot_effects(m1, n = 1)
