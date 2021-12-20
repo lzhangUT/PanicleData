@@ -9,5 +9,11 @@ Full_mash_model*
 Clumped_*
 *All_svd.rds
 *.zip
+SVD_*
 9-DiversityPanel/data/Pvirgatum_V5_GWAS*
 9-DiversityPanel/analysis/gwas/testphe/*
+9-DiversityPanel/analysis/gwas/MAF10/*
+9-DiversityPanel/analysis/gwas/MAF05/plots/*
+9-DiversityPanel/analysis/gwas/permutations/plots/*
+9-DiversityPanel/analysis/gwas/PID_PERM/plots/*
+9_DiversityPanel/analysis/gwas/replicates/plots/*

@@ -156,9 +156,12 @@ pvdiv_standard_gwas(snp = snp05, df = all_phe, covar = covar05,
 
 ```
 
+These are the GWAS effects for the second kind of permuted dataset:
 ```{r}
 library(snpdiver)
 
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+  
 effectspid <- big_attach(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid.rds"))
 metadatapid <- read_csv(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid_associated_metadata.csv"))
 
@@ -176,3 +179,19 @@ saveRDS(mtest5, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_
 2. Add a constant to a trait value for just one subpopulation before GWAS. Can you recover this spiked in signal in GWAS? Or does your population structure correction control for it?
 
 3. More complex analysis: make a covariance matrix with just ancestry informative markers for your phenotype. What does this matrix look like?
+
+
+
+# -----------
+
+# Mash results on two types of permuted dataset
+
+These are the GWAS effects for the first kind of permuted dataset
+
+```{r}
+effects_perm1 <- big_attach(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per.rds"))
+metadata_perm1 <- read_csv(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per_associated_metadata.csv"))
+
+
+```
+
