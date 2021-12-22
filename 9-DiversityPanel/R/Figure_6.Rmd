@@ -238,6 +238,112 @@ snp <- snp_attach(bigsnp_inputs$SNPfiles[7])
 m <- readRDS(here("analysis", "mash",
           "Full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds"))
 
+```
+
+```{r}
+r2_20_m <- read_csv(here::here("analysis", "mash", "Clumped_mash_output_df_PLANT_ID_geno_subset.csv"))
+
+sub_r2_20_m <- which(snp$map$marker.ID %in% r2_20_m$marker.ID)
+post_w_r2_20_m <- m$posterior_weights[sub_r2_20_m,]
+post_w_r2_20_m <- as_tibble(post_w_r2_20_m)
+
+post_w_r2_20_m <- post_w_r2_20_m %>%
+  mutate(equal_effects = equal_effects.12 + equal_effects.9 + equal_effects.8,
+         ED_tPCA = ED_tPCA.16 + ED_tPCA.14) 
+
+r2_20_m <- r2_20_m %>%
+  add_column(no_effects = post_w_r2_20_m$null, equal_effects = post_w_r2_20_m$equal_effects, ED_PCA_3 = post_w_r2_20_m$ED_PCA_3.13,
+             ED_PCA_2 = post_w_r2_20_m$ED_PCA_2.14,
+             ED_tPCA = post_w_r2_20_m$ED_tPCA)
+
+r2_20_m_summary <- r2_20_m %>%
+  group_by(log10BayesFactor > 1.3) %>%
+  summarise(`Mean Sig. Conditions` = mean(Num_Sig_Conditions),
+            `Median Sig. Conditions` = median(Num_Sig_Conditions),
+            `Number of SNPs` = n(),
+            `All correlations are zero` = mean(no_effects),
+            `All correlations are one` = mean(equal_effects),
+            ED_PCA_3 = mean(ED_PCA_3),
+            ED_PCA_2 = mean(ED_PCA_2),
+            ED_tPCA = mean(ED_tPCA)) %>%
+  mutate(r2 = "20%")
+
+markers <- readRDS(here("analysis/mash/Mash_PLANT_ID_geno_subset_unlinked_0r2_markers.rds"))
+sub_r2_0_m <- which(snp$map$marker.ID %in% markers$marker.ID)
+post_w_r2_0_m <- m$posterior_weights[sub_r2_0_m,]
+post_w_r2_0_m <- as_tibble(post_w_r2_0_m)
+
+post_w_r2_0_m <- post_w_r2_0_m %>%
+  mutate(equal_effects = equal_effects.12 + equal_effects.9 + equal_effects.8,
+         ED_tPCA = ED_tPCA.16 + ED_tPCA.14)
+
+lfsr <- lfsr %>%
+  mutate(PL_PKLE = case_when(PAN_LEN_TX2 < 0.05 ~ 1,
+                             TRUE ~ 0),
+         PL_KBSM = case_when(PAN_LEN_MI < 0.05 ~ 1,
+                             TRUE ~ 0),
+         PL_CLMB = case_when(PAN_LEN_MO < 0.05 ~ 1,
+                             TRUE ~ 0),
+         PBN_PKLE = case_when(PRIM_BN_TX2 < 0.05 ~ 1,
+                             TRUE ~ 0),
+         PBN_KBSM = case_when(PRIM_BN_MI < 0.05 ~ 1,
+                             TRUE ~ 0),
+         PBN_CLMB = case_when(PRIM_BN_MO < 0.05 ~ 1,
+                             TRUE ~ 0),
+         SBN_PKLE = case_when(SEC_BN_TX2 < 0.05 ~ 1,
+                             TRUE ~ 0),
+         SBN_KBSM = case_when(SEC_BN_MI < 0.05 ~ 1,
+                             TRUE ~ 0),
+         SBN_CLMB = case_when(SEC_BN_MO < 0.05 ~ 1,
+                             TRUE ~ 0),
+         Num_Sig_Conditions = PL_PKLE + PL_KBSM + PL_CLMB + PBN_CLMB + PBN_KBSM + PBN_PKLE + SBN_KBSM + SBN_PKLE + SBN_CLMB)
+         )
+
+r2_0_m <- markers %>%
+  add_column(no_effects = post_w_r2_0_m$null, equal_effects = post_w_r2_0_m$equal_effects, ED_PCA_3 = post_w_r2_0_m$ED_PCA_3.13,
+             ED_PCA_2 = post_w_r2_0_m$ED_PCA_2.14,
+             ED_tPCA = post_w_r2_0_m$ED_tPCA,
+             Num_Sig_Conditions = lfsr$Num_Sig_Conditions)
+r2_0_m_summary <- r2_0_m %>%
+  group_by(log10BF > 1.3) %>%
+  summarise(`Mean Sig. Conditions` = mean(Num_Sig_Conditions),
+            `Median Sig. Conditions` = median(Num_Sig_Conditions),
+            `Number of SNPs` = n(),
+            `All correlations are zero` = mean(no_effects),
+            `All correlations are one` = mean(equal_effects),
+            ED_PCA_3 = mean(ED_PCA_3),
+            ED_PCA_2 = mean(ED_PCA_2),
+            ED_tPCA = mean(ED_tPCA)) %>%
+  mutate(r2 = "0%") %>%
+  rename(`log10BayesFactor > 1.3` = `log10BF > 1.3`)
+```
+
+```{r}
+m_summary <- r2_20_m_summary %>%
+  full_join(r2_0_m_summary) %>%
+  select(r2, everything()) 
+
+r2_20_m_summary %>%
+  full_join(r2_0_m_summary) %>%
+  select(r2, everything()) %>%
+  rename(log10BayesFactor_Sig = `log10BayesFactor > 1.3`, `Mean Sig Conditions` = `Mean Sig. Conditions`, `Median Sig Conditions` = `Median Sig. Conditions`) %>%
+  filter(log10BayesFactor_Sig) %>%
+  select(-log10BayesFactor_Sig) %>%
+  write_csv(., here("writeup", "Figure_6d_table_different_r2.csv"))
+
+
+
+r2_20_m %>%
+  group_by(Num_Sig_Conditions, log10BayesFactor > 1.3) %>%
+  tally()
+r2_0_m %>%
+  group_by(Num_Sig_Conditions, log10BF > 1.3) %>%
+  tally()
+36/146
+```
+
+
+```{r}
 library(snpdiver)
 p_1 <- mash_plot_marker_effect(m, snp, n = 1)
 p_2 <- mash_plot_marker_effect(m, snp, n = 3)
@@ -545,7 +651,7 @@ saveRDS(markers_0r2_longer, file = here("analysis/mash/Marker_summary_statistics
 
 Put together Figure 6 from the panels built above
 ```{r}
-
+markers_0r2_longer <- readRDS(file = here("analysis/mash/Marker_summary_statistics_long_mash_PLANT_ID_geno_subset_0r2.rds"))
 ```
 
 
@@ -564,8 +670,8 @@ panel_c <- ggdraw() +
 ```{r}
 library(ggrepel)
 # install.packages("ggrepel")
-gxe_df
-panel_d <- p3$covar_df %>%
+gxe_df <- readRDS(file = here("analysis/mash/GxE_df_full_mash_model_5000_SNPs_U_ed_and_100000_SNPs_mash_fit_PLANT_ID_geno_subset.rds"))
+p3$covar_df %>%
   filter(Mass > 0) %>%
   ggplot(aes(x = `Covariance Matrix`, y = Mass)) + 
   geom_bar(stat = "identity") + 
@@ -573,20 +679,21 @@ panel_d <- p3$covar_df %>%
   geom_label_repel(aes(label = round(Mass, 5)), direction = "x", size = 3)
 18700000*.00063725
 
-markers_0r2_longer %>%
-  mutate(VarExp_381 = 2*MAF_382*(1-MAF_382)*EffectMean^2) %>%
-  filter(lfsr < 0.05) %>%
-  group_by(PHE, SITE) %>%
-  summarise(VarExp_381 = sum(VarExp_381))
-markers_0r2_longer %>%
-  mutate(VarExp_381 = 2*MAF_382*(1-MAF_382)*EffectMean^2) %>%
-  filter(lfsr < 0.05) %>%
-  group_by(PHE, SITE) %>%
-  tally()
-gxe_df
-markers_0r2_longer %>%
-  ggplot(aes(x = MAF_382)) +
-  geom_histogram()
+panel_d <- m_summary %>%
+  filter(`log10BayesFactor > 1.3`) %>%
+  rename("All zeroes" = `All correlations are zero`, "All ones" = `All correlations are one`) %>%
+  select(r2, `All zeroes`:ED_tPCA) %>%
+  pivot_longer(`All zeroes`:ED_tPCA, names_to = "Covariance Matrix", values_to = "Mass") %>%
+  ggplot(aes(x = r2, y = Mass)) + 
+  geom_bar(aes(fill = r2), stat = "identity", position = "dodge") + 
+  facet_wrap(~`Covariance Matrix`, ncol = 1, strip.position = "right") +
+  coord_flip() +
+  geom_label_repel(aes(label = round(Mass, 5)), direction = "x", size = 3) +
+  scale_fill_viridis_d(begin = 0., end = 0.4, option = "D") +
+  theme(legend.position = c(0.9, 0.5), strip.placement = "inside", strip.text.y = element_text(angle = 0, hjust = 1, vjust = 0.5)) +
+  labs(x = bquote('r'^2))
+
+?theme
 ```
 
 ```{r}
@@ -610,14 +717,15 @@ panel_b   # heritabilities
 panel_c   # small phenotypic correlations by site - 
 panel_d   # covar with > 0.01% posterior weight
 panel_e   # mash and QTL overlap
-panel_f
+
+
 
 (figure6 <- ggdraw() +
   draw_plot(panel_a, x = 0, y = 0.5, width = 0.3, height = 0.5) +
   draw_plot(panel_b, x = 0.3, y = 0.5, width = 0.2, height = 0.5) +
   draw_plot(panel_c, x = 0.5, y = 0.75, width = 0.5, height = 0.25) +
-  draw_plot(panel_d, x = 0.5, y = 0.5, width = 0.25, height = 0.25) +
-  draw_plot(panel_e, x = 0.75, y = 0.5, width = 0.25, height = 0.25) +
+  draw_plot(panel_d, x = 0.48, y = 0.48, width = 0.32, height = 0.28) +
+  draw_plot(panel_e, x = 0.8, y = 0.5, width = 0.2, height = 0.25) +
   draw_plot(panel_f, x = 0, y = 0, width = 1, height = 0.5) +
   draw_label("a", x = 0.01, y = .98) +
   draw_label("b", x = 0.31, y = .98) +

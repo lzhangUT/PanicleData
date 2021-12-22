@@ -186,12 +186,116 @@ saveRDS(mtest5, file = "~/Github/PanicleData/9-DiversityPanel/analysis/gwas/PID_
 
 # Mash results on two types of permuted dataset
 
-These are the GWAS effects for the first kind of permuted dataset
-
+This is the SNP file used for both types of permutation analysis.
 ```{r}
-effects_perm1 <- big_attach(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per.rds"))
-metadata_perm1 <- read_csv(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per_associated_metadata.csv"))
+library(tidyverse)
+library(bigsnpr)
+load_all("~/Github/snpdiver/")
 
+snp05 <- snp_attach("~/Github/PanicleData/9-DiversityPanel/data/Pvirgatum_V5_GWAS_381g_PanicleData_subset_maf_0.05.rds")
+metadata <- readRDS("~/Github/PanicleData/9-DiversityPanel/data/metadata.rds")
+subpops <- readRDS("~/Github/pvdiv-phenology-gxe/data/subpop_color_coding.rds")
+pid_phe <- readRDS(file = file.path("~/Github/PanicleData/9-DiversityPanel/",
+                                    "data", "all_panicle_phe_perm_pid.rds"))
 
 ```
 
+
+These are the GWAS effects for the first kind of permuted dataset
+```{r}
+effects_perm1 <- big_attach(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per.rds"))
+(metadata_perm1 <- read_csv(here("analysis/gwas/MAF05/gwas_effects_all_panicle_phe_MAF_5per_associated_metadata.csv")))
+
+metadata_perm1$phe[c(1:3, 12:14, 23:25, 34:36, 45:47, 56:58, 67:69, 78:80,
+                     89:91)]
+BLUP_PERM_1 <- c(1:3, 12:14, 23:25, 34:36, 45:47, 56:58, 67:69, 78:80,
+                     89:91)
+PERM_1 <- c(2:3, 13:14, 24:25, 35:36, 46:47, 57:58, 68:69, 79:80,
+                     90:91)
+```
+
+These are the GWAS effects for the second kind of permuted dataset:
+```{r}
+effects_pid <- big_attach(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid.rds"))
+(metadata_pid <- read_csv(here("analysis/gwas/PID_PERM/gwas_effects_all_panicle_phe_perm_pid_associated_metadata.csv")))
+
+metadata_pid$phe[c(1:9, 82:99)]
+BLUP_PERM_2 <- c(1:9, 82:99)
+PERM_2 <- c(82:99)
+```
+
+
+# Subset to speed mash
+Subset SNP & effects
+```{r}
+# Set up SNP subset given the PLANT_ID to include, the maf, and reduce to a 
+# small set of SNPs to test
+plants <- snp05$fam$sample.ID
+panicle_381 <- which(plants %in% pid_phe$PLANT_ID)
+maf_thresh10 <- snp_MAF(snp05$genotypes, ind.row = panicle_381)
+snp_subset_maf10 <- which(maf_thresh10 > 0.1)
+snp_subset_maf10_10k <- c(1:floor(length(snp_subset_maf10)/1000))*1000
+snp_subset <- snp_subset_maf10[snp_subset_maf10_10k]
+
+# subset SNPs & effects given the above snp_subset of snp05
+snp05_sub <- subset(snp05, ind.col = snp_subset)
+snp_05s <- snp_attach(snp05_sub)
+
+```
+
+Subset Perm1 & run mash on BLUPs & PERM
+```{r}
+effects_sub1 <- big_copy(effects_perm1, ind.row = snp_subset)
+
+# pick the phenotype subset
+
+mtest1 <- dive_effects2mash(effects = effects_sub1, snp = snp_05s, 
+                            scale.phe = FALSE, replace.na = FALSE,  
+                            metadata = metadata_perm1, phe = BLUP_PERM_1,
+                            suffix = "BLUP_PERM_1_maf10_10ksubset", 
+                            outputdir = here("analysis/gwas/MAF05"))
+saveRDS(mtest1, file = here("analysis/gwas/MAF05/", 
+                            paste0("Mash_output_", "1K_strong_", "2K_random_",
+                                   "BLUP_PERM_1_maf10_10ksubset", ".rds" )))
+
+```
+
+
+Subset PID & run mash on BLUPs & PERM
+```{r}
+effects_sub2 <- big_copy(effects_pid, ind.row = snp_subset)
+
+# pick the phenotype subset (BLUPs & total PERM)
+
+mtest2 <- dive_effects2mash(effects = effects_sub2, snp = snp_05s, 
+                            scale.phe = FALSE, replace.na = FALSE,  
+                            metadata = metadata_pid, phe = BLUP_PERM_2,
+                            suffix = "BLUP_PERM_2_maf10_10ksubset", 
+                            outputdir = here("analysis/gwas/PID_PERM"))
+
+saveRDS(mtest2, file = here("analysis/gwas/PID_PERM/", 
+                            paste0("Mash_output_", "1K_strong_", "2K_random_",
+                                   "BLUP_PERM_2_maf10_10ksubset", ".rds")))
+```
+
+
+Quite clearly in the 1:9, 55:99 (PERM & BLUP) - the equal_effects covariance structure is strongly in every condition. So when phenotypes are not correlated within genotypes, this structure goes away (as in the first set of permutations I did). But when they are correlated within genotypes, this structure is present & common.
+
+
+
+```{r}
+mash_plot_covar(mtest1, saveoutput = TRUE)
+mash_plot_covar(mtest2, saveoutput = TRUE)
+(tpca <- mash_plot_Ulist(mtest1, range = 6, labels = FALSE))
+mash_plot_Ulist(mtest2, range = 6)
+length(get_significant_results(mtest1))
+length(get_significant_results(mtest2))
+mash_plot_manhattan_by_condition(mtest1, snp = snp_05s, saveoutput = TRUE)
+mash_plot_marker_effect(mtest1, snp = snp_05s, n = 1, saveoutput = TRUE)
+mash_plot_marker_effect(mtest2, snp = snp_05s, n = 1, saveoutput = TRUE)
+
+mash_plot_sig_by_condition(mtest1, which(grepl("PERM", switchgrassGWAS:::get_colnames(mtest1)) == TRUE), saveoutput = TRUE)
+
+snpdiver::mash_plot_Ulist(mtest1, range = 1:6, labels = FALSE, saveoutput = TRUE)
+
+```
